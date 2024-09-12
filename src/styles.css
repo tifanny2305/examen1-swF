@@ -1,1 +1,9 @@
-/* You can add global styles to this file, and also import other style files */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+.card{
+  @apply bg-white rounded-lg shadow-2xl border-4 border-slate-800 border-spacing-2 shadow-gray-800 p-6;
+}
+.btngray{
+  @apply px-4 py-2 text-sm font-semibold  text-white  bg-gray-700 rounded-md hover:bg-gray-400 hover:text-gray-900
+}

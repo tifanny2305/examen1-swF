@@ -2,14 +2,12 @@ import { Component } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
 
 @Component({
-  selector: 'app-root',
+  selector: 'app-layout',
   standalone: true,
   imports: [RouterOutlet],
-  templateUrl: './app.component.html',
-  styleUrl: './app.component.css'
+  templateUrl: './layout.component.html',
+  styleUrl: './layout.component.css'
 })
-export class AppComponent {
-  title = 'examen1-swF';
+export class LayoutComponent {
 
- 
 }
