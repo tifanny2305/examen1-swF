@@ -2,12 +2,12 @@ import { Component } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
 
 @Component({
-  selector: 'app-layout',
+  selector: 'app-access',
   standalone: true,
   imports: [RouterOutlet],
-  templateUrl: './layout.component.html',
-  styleUrl: './layout.component.css'
+  templateUrl: './access.component.html',
+  styleUrls: ['./access.component.css']
 })
-export class LayoutComponent {
+export class AccessComponent {
 
 }

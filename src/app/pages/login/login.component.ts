@@ -19,7 +19,7 @@ export class LoginComponent {
 
   onLogin(): void {
     this.apiService.login(this.username, this.password).subscribe({
-      next: () => this.router.navigate(['/sala']),
+      next: () => this.router.navigate(['/access']),
       error: (err) => {
         console.error('Error en el login:', err);
         this.errorMessage = 'Nombre de usuario o contraseña incorrectos';

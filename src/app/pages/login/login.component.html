@@ -1,142 +1,50 @@
-<!-- <div class=" bg-cyan-600 px-10 py-7 2xl:py-14 h-screen hidden sm:block">
-    <div class="w-full h-full flex justify-items-center">
-      <div class="grid grid-cols-3 gap-8 w-full h-full "> -->
-        <!-- Contenedor del texto -->
-        <!-- <div class="card col-span-1 2xl:h-[800px] ">
-          <div class="h-full w-full ">
-            <div class="md:mb-10 xl:mb-20 2xl:mb-28 ">
-              <div class="flex items-center justify-center mb-10">
-                <span class="self-center text-xl font-semibold sm:text-2xl 2xl:text-5xl whitespace-nowrap text-slate-700 space-x-1">
-                  <i class="fa-solid fa-school"></i> Software 1
-                </span>
-              </div>
-              <div class="text-center">
-                <a href="#" class="text-center text-[10px] sm:text-2xl md:text-2xl lg:text-2xl xl:text-3xl font-semibold text-gray-900">
-                  Herramienta para programadores
-                </a>
-              </div>
-            </div>
-
-            <form (ngSubmit)="onLogin()" class="space-y-6">
-              <div class="flex lg:mb-7 xl:mb-10 2xl:mb-14">
-                <label for="username" class="font-semibold absolute text-sm xl:text-lg  text-gray-500 -translate-y-5 xl:-translate-y-7 2xl:-translate-y-10">
-                  Tu nombre de usuario
-                </label>
-                <input
-                  type="text"
-                  [(ngModel)]="username"
-                  name="username"
-                  id="username"
-                  class="block py-2.5 px-0 w-full text-sm 2xl:text-xl text-gray-900 bg-transparent border-0 border-b-2 border-gray-300 appearance-none dark:text-white dark:border-gray-600 dark:focus:border-blue-500 focus:outline-none focus:ring-0 focus:border-blue-600 peer"
-                  placeholder=""
-                  required
-                />
-              </div>
-              <div class="flex lg:mb-7 xl:mb-10 2xl:mb-14">
-                <label for="password" class="font-semibold absolute text-sm xl:text-lg  text-gray-500 -translate-y-5 xl:-translate-y-7 2xl:-translate-y-10">
-                  Contraseña
-                </label>
-                <input
-                  type="password"
-                  [(ngModel)]="password"
-                  name="password"
-                  id="password"
-                  placeholder=""
-                  class="block py-2.5 px-0 w-full text-sm text-gray-900 bg-transparent border-0 border-b-2 border-gray-300 appearance-none dark:text-white dark:border-gray-600 dark:focus:border-blue-500 focus:outline-none focus:ring-0 focus:border-blue-600 peer"
-                  required
-                />
-              </div>
-              <div class="flex lg:mb-4 xl:mb-7">
-                <div class="flex items-start">
-                  <div class="flex items-center h-full">
-                    <input
-                      id="remember"
-                      aria-describedby="remember"
-                      type="checkbox"
-                      class="w-4 h-4 border border-gray-300 rounded-lg bg-gray-50"
-                    />
-                  </div>
-                  <div class="ml-3 text-sm">
-                    <label for="remember" class="text-gray-500 text-sm xl:text-lg ">Recuérdame</label>
-                  </div>
-                </div>
-              </div>
-              <div>
-                <button
-                  type="submit"
-                  class="w-full text-white bg-gray-800 hover:bg-gray-900 focus:outline-none focus:ring-4 focus:ring-gray-300 font-medium rounded-full text-sm xl:text-lg  px-5 py-2.5 me-2 mb-2"
-                >
-                  Iniciar sesión
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>    -->
-        
-        <section class="bg-cyan-700 dark:bg-gray-900">
-          <div class="flex flex-col items-center justify-center px-6 py-8 mx-auto md:h-screen lg:py-0">
-            <a href="#" class="flex items-center mb-4 text-2xl font-semibold text-gray-900 dark:text-white">
-              <img src="assets/images/login.png" class="w-full h-64 object-contain"> 
-            </a>
-          <div class="w-full bg-white rounded-lg shadow dark:border sm:max-w-md xl:p-0 dark:bg-gray-800 dark:border-gray-700">
-            <div class="p-4 md:p-8 space-y-4 md:space-y-6">
-              <h1 class="text-center font-bold leading-tight tracking-tight text-gray-900 md:text-2xl dark:text-white">
-                Herramienta para programadores
-              </h1>
-              <form (ngSubmit)="onLogin()" class="space-y-4 md:space-y-6" action="#">
-                <!-- Campo de Usuario -->
-                <div>
-                  <label for="username" class="block mb-2 text-sm font-medium text-gray-900 dark:text-white">Usuario</label>
-                  <input 
-                    type="text" 
-                    name="username" 
-                    id="username" 
-                    class="bg-gray-50 border border-gray-300 text-gray-900 rounded-lg focus:ring-blue-600 focus:border-blue-600 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500" 
-                    placeholder="" 
-                    required>
-                </div>
-                <!-- Campo de Contraseña -->
-                <div>
-                  <label for="password" class="block mb-2 text-sm font-medium text-gray-900 dark:text-white">Password</label>
-                  <input 
-                    type="password" 
-                    name="password" 
-                    id="password" 
-                    class="bg-gray-50 border border-gray-300 text-gray-900 rounded-lg focus:ring-blue-600 focus:border-blue-600 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500" 
-                    placeholder="" 
-                    required>
-                </div>
-                <!-- Checkbox de Recuérdame -->
-                <div class="flex items-center">
-                  <input 
-                    id="remember" 
-                    type="checkbox" 
-                    class="w-4 h-4 border border-gray-300 rounded bg-gray-50 focus:ring-3 focus:ring-blue-300 dark:bg-gray-700 dark:border-gray-600 dark:focus:ring-blue-600 dark:ring-offset-gray-800">
-                  <label for="remember" class="ml-2 text-sm text-gray-500 dark:text-gray-300">Recuérdame</label>
-                </div>
-                <!-- Botón de Envío -->
-                <div>
-                  <button 
-                    type="submit" 
-                    class="w-full bg-slate-700 text-white font-medium rounded-lg text-sm px-5 py-2.5 text-center hover:bg-blue-700 focus:ring-4 focus:ring-blue-300 dark:bg-blue-500 dark:hover:bg-blue-600 dark:focus:ring-blue-800">
-                    Iniciar sesión
-                  </button>
-                </div>
-              </form>
-            </div>
-          </div>    
-
-        <!-- <div class="col-span-2 flex items-center justify-center">
-            <div class="w-full h-full">
-              <img
-                src="assets/images/login.png"
-                alt="Imagen sin fondo"
-                class="w-full h-full object-contain"
-              />
-            </div>
-        </div> -->
-      </div>
-    </section>     
-      <!-- </div>
+<section class="min-h-screen flex flex-col bg-gradient-to-r from-cyan-600 to-blue-900">
+  <!-- Contenedor principal -->
+  <div class="flex flex-col items-center justify-center flex-grow p-6">
+    <!-- Logo reducido -->
+    <div class="mb-8">
+      <img src="assets/images/login.png" alt="Logo" class="w-full h-64 object-contain">
     </div>
-  </div> -->
+
+    <!-- Contenedor del formulario -->
+    <div class="w-full bg-white rounded-lg shadow-lg p-8 max-w-md">
+      <h1 class="text-2xl font-bold text-center text-gray-900 mb-6">
+        Herramienta para programadores
+      </h1>
+
+      <!-- Formulario de login -->
+      <form (ngSubmit)="onLogin()" class="space-y-6">
+        <!-- Campo de Usuario -->
+        <div class="relative">
+          <label for="username" class="block mb-2 text-sm font-medium text-gray-700">Usuario</label>
+          <input type="text" name="username" id="username" class="block w-full p-2.5 pl-10 text-sm border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500" placeholder="" required>
+          <!-- Icono de usuario -->
+          <div class="absolute inset-y-0 left-0 flex items-center pl-3">
+            <i class="fas fa-user text-gray-400"></i>
+          </div>
+        </div>
+
+        <!-- Campo de Contraseña -->
+        <div class="relative">
+          <label for="password" class="block mb-2 text-sm font-medium text-gray-700">Contraseña</label>
+          <input type="password" name="password" id="password" class="block w-full p-2.5 pl-10 text-sm border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500" placeholder="" required>
+          <!-- Icono de candado -->
+          <div class="absolute inset-y-0 left-0 flex items-center pl-3">
+            <i class="fas fa-lock text-gray-400"></i>
+          </div>
+        </div>
+
+        <!-- Checkbox de Recuérdame -->
+        <div class="flex items-center">
+          <input id="remember" type="checkbox" class="w-4 h-4 border-gray-300 rounded focus:ring-blue-500">
+          <label for="remember" class="ml-2 text-sm text-gray-500">Recuérdame</label>
+        </div>
+
+        <!-- Botón de Envío -->
+        <button type="submit" class="w-full bg-slate-700 text-white rounded-lg py-3 text-center hover:bg-slate-800 focus:outline-none focus:ring-4 focus:ring-blue-300 transition-all">
+          Iniciar sesión
+        </button>
+      </form>
+    </div>
+  </div>
+</section>

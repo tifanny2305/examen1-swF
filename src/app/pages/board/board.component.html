@@ -1,0 +1,30 @@
+<p>board works!</p>
+<div class="toolbox">
+    <ul>
+      <li (click)="addClass()">Class</li>
+      <!-- Agrega más opciones según tu diagrama -->
+    </ul>
+</div>
+
+<div>
+    <button (click)="addClass()">Agregar Clase</button>
+    
+    <div>
+      <label for="fromClass">De (Clase):</label>
+      <input type="number" id="fromClass" [(ngModel)]="fromClassId">
+  
+      <label for="toClass">A (Clase):</label>
+      <input type="number" id="toClass" [(ngModel)]="toClassId">
+  
+      <select [(ngModel)]="selectedRelation">
+        <option value="association">Asociación</option>
+        <option value="composition">Composición</option>
+        <option value="aggregation">Agregación</option>
+      </select>
+      <button (click)="addRelation(fromClassId, toClassId, selectedRelation)">Agregar Relación</button>
+    </div>
+    
+    <div #diagramDiv style="width:100%; height:600px; background-color: #f0f0f0;"></div>
+  </div>
+  
+  

@@ -1,8 +1,8 @@
 import { Routes } from '@angular/router';
 import { LoginComponent } from './pages/login/login.component';
-import { LayoutComponent } from './layout/layout.component';
-import { SalaComponent } from './layout/sala/sala.component';
-import { AccessComponent } from './layout/access/access.component';
+import { AccessComponent } from './pages/access/access.component';
+import { BoardComponent } from './pages/board/board.component';
+
 
 export const routes: Routes = [
     {
@@ -13,16 +13,12 @@ export const routes: Routes = [
         component: LoginComponent
     },
     {
-        path: '',
-        component: LayoutComponent,
-        children:[
-            {
-                path: 'access',
-                title: 'access',
-                component: AccessComponent
-            }
-        ]
+        path: 'access',
+        component: AccessComponent,
     },
-
+    {
+        path: 'board',
+        component: BoardComponent,
+    },
 
 ];
