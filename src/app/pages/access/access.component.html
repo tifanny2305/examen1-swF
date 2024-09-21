@@ -2,8 +2,8 @@
     <!-- Encabezado -->
     <header class="bg-white shadow w-full py-4 px-8 flex justify-end">
       <div class="flex items-center space-x-4">
-        <img src="assets/images/profile.png" alt="Perfil" class="w-10 h-10 rounded-full">
-        <button class="text-red-500 hover:text-red-700 font-semibold">Finalizar sesión</button>
+        <!-- <img src="" alt="Perfil" class="w-10 h-10 rounded-full"> -->
+        <button (click)="logout()" class="text-red-500 hover:text-red-700 font-semibold">Finalizar sesión</button>
       </div>
     </header>
   
@@ -15,10 +15,10 @@
         <h2 class="text-xl font-bold mb-6 text-center">Crear una Sala</h2>
         <div class="grid grid-cols gap-6 ">
           <!-- Formulario Crear Sala -->
-          <form class="space-y-4">
+          <form (ngSubmit)="onCreateRoom()" class="space-y-4">
             <div>
               <label for="roomName" class="block text-sm font-medium text-gray-700">Nombre de la Sala</label>
-              <input type="text" id="roomName" name="roomName" placeholder="Nombre de la sala" class="mt-1 block w-full p-2.5 border border-gray-300 rounded-md">
+              <input type="text" id="roomName" name="roomName" [(ngModel)]="roomName" placeholder="Nombre de la sala" class="mt-1 block w-full p-2.5 border border-gray-300 rounded-md">
             </div>
             <button type="submit" class="w-full bg-slate-700 text-white font-medium rounded-lg py-2.5 text-center hover:bg-slate-800 focus:outline-none">
               Crear Sala
@@ -32,10 +32,10 @@
         <h2 class="text-xl font-bold mb-6 text-center">Ingresar a una Sala</h2>
         <div class="grid grid-cols gap-6">
           <!-- Formulario Ingresar a la Sala -->
-          <form class="space-y-4">
+          <form (ngSubmit)="onJoinRoom()" class="space-y-4">
             <div>
               <label for="roomCode" class="block text-sm font-medium text-gray-700">Código de la Sala</label>
-              <input type="text" id="roomCode" name="roomCode" placeholder="Código de la sala" class="mt-1 block w-full p-2.5 border border-gray-300 rounded-md">
+              <input type="text" id="roomCode" name="roomCode" [(ngModel)]="roomCode" placeholder="Código de la sala" class="mt-1 block w-full p-2.5 border border-gray-300 rounded-md">
             </div>
             <button type="submit" class="w-full bg-emerald-600 text-white font-medium rounded-lg py-2.5 text-center hover:bg-green-700 focus:outline-none">
               Ingresar a Sala

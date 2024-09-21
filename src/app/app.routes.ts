@@ -17,7 +17,7 @@ export const routes: Routes = [
         component: AccessComponent,
     },
     {
-        path: 'board',
+        path: 'board/:codigo',
         component: BoardComponent,
     },
 
