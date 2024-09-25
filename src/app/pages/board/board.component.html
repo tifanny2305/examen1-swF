@@ -1,6 +1,17 @@
 <div class="max-w-7xl mx-auto space-y-4 px-6 py-8 bg-gray-50 rounded-lg shadow-md">
+
+  <!-- Agregar Clase -->
+  <div class="space-y-4 bg-white p-4 rounded-lg shadow-lg">
+    <h3 class="text-base font-medium mb-2 text-gray-800">Agregar Clase</h3>
+    <button 
+      class="bg-blue-900 text-white text-sm px-3 py-1 rounded-md hover:bg-blue-500 transition-all shadow"
+      (click)="addClass()">
+      Agregar Clase
+    </button>
+  </div>
+
   <div class="grid grid-cols-2 gap-4">
-    
+
     <!-- Columna de Atributos -->
     <div class="space-y-6">
       
@@ -22,7 +33,7 @@
           </select>
           <button 
             (click)="addAttribute()" 
-            class="bg-blue-600 text-white text-sm px-3 py-1 rounded-md hover:bg-blue-500 transition-all shadow">
+            class="bg-blue-900 text-white text-sm px-3 py-1 rounded-md hover:bg-blue-500 transition-all shadow">
             Agregar Atributo
           </button>
         </div>
@@ -41,7 +52,7 @@
               </option>
             </select>
             <button (click)="removeAttribute(selectedAttribute)"
-              class="bg-red-600 text-white text-sm px-3 py-1 rounded-md hover:bg-red-500 transition-all shadow">
+              class="bg-red-800 text-white text-sm px-3 py-1 rounded-md hover:bg-red-500 transition-all shadow">
               Eliminar Atributo
             </button>
           </div>
@@ -70,7 +81,7 @@
           </select>
           <button 
             (click)="addMethod()" 
-            class="bg-blue-600 text-white text-sm px-3 py-1 rounded-md hover:bg-blue-500 transition-all shadow">
+            class="bg-blue-900 text-white text-sm px-3 py-1 rounded-md hover:bg-blue-500 transition-all shadow">
             Agregar Método
           </button>
         </div>
@@ -89,7 +100,7 @@
               </option>
             </select>
             <button (click)="removeMethod(selectedMethod)"
-              class="bg-red-600 text-white text-sm px-3 py-1 rounded-md hover:bg-red-500 transition-all shadow">
+              class="bg-red-800 text-white text-sm px-3 py-1 rounded-md hover:bg-red-500 transition-all shadow">
               Eliminar Método
             </button>
           </div>
@@ -98,14 +109,88 @@
     </div>
   </div>
 
-  <!-- Contenedor de Relaciones (ocupa todo el ancho debajo) -->
+  <!-- Contenedor de Relaciones -->
+
   <div class="space-y-4 bg-white p-4 rounded-lg shadow-lg mt-4">
     <h3 class="text-base font-medium mb-2 text-gray-800">Relaciones</h3>
-    <button class="bg-green-600 text-white text-sm px-3 py-1 rounded-md hover:bg-green-500 transition-all shadow">
-      Agregar Relación
-    </button>
+    <div class="grid grid-cols-2 gap-4">
+
+      <!-- Clase origen destino -->
+      <div>
+        <label class="text-sm text-gray-600">Clase de Origen:</label>
+        <select [(ngModel)]="fromClassId" class="border p-2 rounded w-full mb-4">
+          <option *ngFor="let class of classList" [value]="class.key">{{ class.name }}</option>
+        </select>
+      
+        <label class="text-sm text-gray-600">Clase de Destino:</label>
+        <select [(ngModel)]="toClassId" class="border p-2 rounded w-full">
+          <option *ngFor="let class of classList" [value]="class.key">{{ class.name }}</option>
+        </select>
+      </div>
+  
+      <!-- Multiplicidad -->
+      <div>
+        <label class="text-sm text-gray-600">Multiplicidad Origen:</label>
+        <input 
+          [(ngModel)]="multiplicityFrom" 
+          placeholder="Ej. 1, *, 0..1" 
+          class="border p-2 rounded w-full mb-4" />
+      
+        <label class="text-sm text-gray-600">Multiplicidad Destino:</label>
+         <input 
+          [(ngModel)]="multiplicityTo" 
+          placeholder="Ej. 1, *, 0..1" 
+          class="border p-2 rounded w-full" />
+      </div>
+    </div>
+
+    <div class="flex space-x-4 mt-4">
+      <!-- Asociacion -->
+      <button 
+        (click)="createAssociation(fromClassId, toClassId, multiplicityFrom, multiplicityTo)" 
+        class="bg-green-600 text-white text-sm px-3 py-1 rounded-md hover:bg-green-500 transition-all shadow">
+        Crear Asociacion
+      </button>
+
+      <!-- Asociacion Directa -->
+      <button 
+        (click)="createAssociationDirect(fromClassId, toClassId, multiplicityFrom, multiplicityTo)" 
+        class="bg-green-600 text-white text-sm px-3 py-1 rounded-md hover:bg-green-500 transition-all shadow">
+        Crear Asociacion Directa
+      </button>
+
+      <!-- Generalizacion -->
+      <button 
+        (click)="createGeneralization(fromClassId, toClassId, multiplicityFrom, multiplicityTo)" 
+        class="bg-green-600 text-white text-sm px-3 py-1 rounded-md hover:bg-green-500 transition-all shadow">
+        Crear Generalizacion
+      </button>
+
+      <!-- Agregacion -->
+      <button 
+        (click)="createAggregation(fromClassId, toClassId, multiplicityFrom, multiplicityTo)" 
+        class="bg-green-600 text-white text-sm px-3 py-1 rounded-md hover:bg-green-500 transition-all shadow">
+        Crear Agregacion
+      </button>
+
+      <!-- Composicion -->
+      <button 
+        (click)="createComposition(fromClassId, toClassId, multiplicityFrom, multiplicityTo)" 
+        class="bg-green-600 text-white text-sm px-3 py-1 rounded-md hover:bg-green-500 transition-all shadow">
+        Crear Composicion
+      </button>
+
+      <!-- Recursion -->
+      <button 
+        (click)="createRecursion(fromClassId, fromClassId, multiplicityFrom, multiplicityTo)" 
+        class="bg-green-600 text-white text-sm px-3 py-1 rounded-md hover:bg-green-500 transition-all shadow">
+        Crear Recursion
+      </button>
+      
+    </div>
   </div>
 
   <!-- Contenedor del diagrama -->
   <div #diagramDiv id="diagramDiv" class="w-full h-[600px] bg-gray-100 rounded-lg shadow-lg mt-4"></div>
+
 </div>

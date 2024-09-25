@@ -25,11 +25,13 @@ export class BoardComponent implements AfterViewInit {
   selectedMethod: string = ''; //Nombre del metodoDelete select
 
   methodReturnType: string = 'void'; // Tipo de retorno por defecto para métodos
-  attributeReturnType: string = 'void'; 
+  attributeReturnType: string = '';  // Tipo de retorno por defecto para atributos
 
-  selectedRelationType: string = 'association'; // Tipo de relación seleccionado
-  fromClassId: string | null = null; // Clase de origen seleccionada
-  toClassId: string | null = null;   // Clase de destino seleccionada
+  fromClassId: string | null = null; // Clase de origen
+  toClassId: string | null = null; // Clase de destino
+  multiplicityFrom: string = ""; // Multiplicidad por defecto origen
+  multiplicityTo: string = ""; // Multiplicidad por defecto destino
+
   classList: any[] = [];  // Lista de clases (nodos) disponibles para seleccionar
 
   //PRUEBAS
@@ -51,6 +53,7 @@ export class BoardComponent implements AfterViewInit {
 
     this.diagram = new go.Diagram(this.diagramDiv.nativeElement);
     this.initializeDiagram();
+    
     this.cdr.detectChanges();
 
     // Escuchar cambios en el modelo de GoJS
@@ -80,23 +83,19 @@ export class BoardComponent implements AfterViewInit {
       go.Node, 'Auto',
       go.GraphObject.make(go.Shape, 'RoundedRectangle', 
         { fill: 'lightblue', stroke: 'black', strokeWidth: 1, portId: "" }), 
-      go.GraphObject.make(
-        go.Panel, 'Vertical', { margin: 5
-         }, 
-        go.GraphObject.make(
-
-          // Nombre de la clase
-          go.TextBlock,  
-          {
-            font: 'bold 11pt sans-serif',
-            margin: new go.Margin(5, 0, 5, 0),  
-            editable: true      
-          },
-          new go.Binding('text', 'name').makeTwoWay()),
-    
-        go.GraphObject.make(go.Shape, "LineH", { strokeWidth: 1,maxSize: new go.Size(NaN, 10) }),  // Línea horizontal
-    
-        go.GraphObject.make(go.Panel, 'Vertical',  // Panel para los atributos
+      go.GraphObject.make(go.Panel, 'Vertical', { margin: 5 }, 
+  
+        // Nombre de la clase
+        go.GraphObject.make(go.TextBlock, {
+          font: 'bold 11pt sans-serif',
+          margin: new go.Margin(5, 0, 5, 0),
+          editable: true
+        }, new go.Binding('text', 'name').makeTwoWay()),
+  
+        go.GraphObject.make(go.Shape, "LineH", { strokeWidth: 1, maxSize: new go.Size(NaN, 10) }),  // Línea horizontal para separar
+  
+        // Panel para atributos
+        go.GraphObject.make(go.Panel, 'Vertical', 
           new go.Binding('itemArray', 'attributes'),
           {
             itemTemplate: go.GraphObject.make(go.Panel, 'Horizontal',
@@ -105,10 +104,11 @@ export class BoardComponent implements AfterViewInit {
             )
           }
         ),
-    
+  
         go.GraphObject.make(go.Shape, "LineH", { strokeWidth: 1, maxSize: new go.Size(NaN, 10) }),  // Otra línea horizontal
-    
-        go.GraphObject.make(go.Panel, 'Vertical',  // Panel para los métodos
+  
+        // Panel para métodos
+        go.GraphObject.make(go.Panel, 'Vertical', 
           new go.Binding('itemArray', 'methods'),
           {
             itemTemplate: go.GraphObject.make(go.Panel, 'Horizontal',
@@ -119,15 +119,44 @@ export class BoardComponent implements AfterViewInit {
         )
       )
     );
+  
+    // Configurar el template de los enlaces
+    this.diagram.linkTemplate =
+    new go.Link()
+      .add(
+        new go.Shape({ stroke: 'black', strokeWidth: 1 }),
 
+        //destino flecha
+        new go.Shape()  
+        .bind("toArrow", "toArrow")
+        //relleno
+        .bind("fill", "fill"),    
+
+        //origen
+        new go.TextBlock({ segmentIndex: 0, segmentOffset: new go.Point(NaN, NaN),  editable: true, segmentOrientation: go.Orientation.Upright })
+          .bind("text", "multiplicityFrom"),
+
+        //centro del enlace
+        new go.TextBlock({ segmentIndex: 0, segmentFraction: 0.5, editable: true })
+          .bind("text", "text"),
+
+        //destino
+        new go.TextBlock({ segmentIndex: -1, segmentOffset: new go.Point(NaN, NaN), editable: true, segmentOrientation: go.Orientation.Upright })
+          .bind("text", "multiplicityTo")
+      );
+  
     // Inicializar el modelo con algunas clases de prueba
-    this.diagram.model = new go.GraphLinksModel(
-      [
-        { key: 1, name: 'Clase1', attributes: [{ name: 'atributo1' }], methods: [{ name: 'metodo1' }] },
-        { key: 2, name: 'Clase2', attributes: [], methods: [] }
-      ],
-      []
-    );
+    const initialClasses = [
+      { key: 1, name: 'Clase1', attributes: [{ name: 'atributo1' }], methods: [{ name: 'metodo1' }] },
+      { key: 2, name: 'Clase2', attributes: [], methods: [] }
+    ];
+
+    // Modelo inicial sin enlaces
+    this.diagram.model = new go.GraphLinksModel(initialClasses, []);
+    this.classList = initialClasses;
+  
+    console.log('Clases disponibles:', this.classList);
+
   }
 
   // Método para actualizar el diagrama cuando recibimos datos de otros usuarios
@@ -214,6 +243,204 @@ export class BoardComponent implements AfterViewInit {
     }
   }
 
-  
+  //Asociacion
+  createAssociation(fromClassId: string | null, toClassId: string | null, multiplicityFrom: string, multiplicityTo: string): void {
+
+    console.log('From Class ID:', fromClassId);
+    console.log('To Class ID:', toClassId);
+
+    
+    if (fromClassId && toClassId) {
+      const linkData = {
+        from: Number(fromClassId),
+        to: Number(toClassId),
+        routing: go.Routing.Orthogonal,
+        text: "text",
+        multiplicityFrom: multiplicityFrom || "",
+        multiplicityTo: multiplicityTo || "" ,
+        toArrow: "" 
+      };
+
+      const model = this.diagram.model as go.GraphLinksModel;
+
+      try {
+        model.addLinkData(linkData);
+        console.log('Enlace creado:', model.linkDataArray);
+      } catch (error) {
+        console.error('Error al agregar el enlace:', error);
+      }
+ 
+      
+    } else {
+      alert('Por favor, seleccione las clases de origen y destino.');
+    }
+  }
+
+  //Asociacion Directa
+  createAssociationDirect(fromClassId: string | null, toClassId: string | null, multiplicityFrom: string, multiplicityTo: string): void {
+
+    console.log('From Class ID:', fromClassId);
+    console.log('To Class ID:', toClassId);
+
+    
+    if (fromClassId && toClassId) {
+      const linkData = {
+        from: Number(fromClassId),
+        to: Number(toClassId),
+        routing: go.Routing.Orthogonal,
+        text: "text",
+        multiplicityFrom: multiplicityFrom || "",
+        multiplicityTo: multiplicityTo || "" ,
+        toArrow: "OpenTriangle" 
+      };
+
+      const model = this.diagram.model as go.GraphLinksModel;
+
+      try {
+        model.addLinkData(linkData);
+        console.log('Enlace creado:', model.linkDataArray);
+      } catch (error) {
+        console.error('Error al agregar el enlace:', error);
+      }
+ 
+      
+    } else {
+      alert('Por favor, seleccione las clases de origen y destino.');
+    }
+  }
+
+  //Generalizacion
+  createGeneralization(fromClassId: string | null, toClassId: string | null, multiplicityFrom: string, multiplicityTo: string): void {
+
+    console.log('From Class ID:', fromClassId);
+    console.log('To Class ID:', toClassId);
+
+    
+    if (fromClassId && toClassId) {
+      const linkData = {
+        from: Number(fromClassId),
+        to: Number(toClassId),
+        routing: go.Routing.Orthogonal,
+        text: "text",
+        multiplicityFrom: multiplicityFrom || "",
+        multiplicityTo: multiplicityTo || "" ,
+        toArrow: "RoundedTriangle",
+        fill: "transparent"
+      };
+
+      const model = this.diagram.model as go.GraphLinksModel;
+
+      try {
+        model.addLinkData(linkData);
+        console.log('Enlace creado:', model.linkDataArray);
+      } catch (error) {
+        console.error('Error al agregar el enlace:', error);
+      }
+ 
+      
+    } else {
+      alert('Por favor, seleccione las clases de origen y destino.');
+    }
+  }
+
+  //Agregacion
+  createAggregation(fromClassId: string | null, toClassId: string | null, multiplicityFrom: string, multiplicityTo: string): void {
+
+    console.log('From Class ID:', fromClassId);
+    console.log('To Class ID:', toClassId);
+
+    
+    if (fromClassId && toClassId) {
+      const linkData = {
+        from: Number(fromClassId),
+        to: Number(toClassId),
+        routing: go.Routing.Orthogonal,
+        text: "text",
+        multiplicityFrom: multiplicityFrom || "",
+        multiplicityTo: multiplicityTo || "" ,
+        toArrow: "StretchedDiamond",
+        fill: "transparent" 
+      };
+
+      const model = this.diagram.model as go.GraphLinksModel;
+
+      try {
+        model.addLinkData(linkData);
+        console.log('Enlace creado:', model.linkDataArray);
+      } catch (error) {
+        console.error('Error al agregar el enlace:', error);
+      }
+ 
+      
+    } else {
+      alert('Por favor, seleccione las clases de origen y destino.');
+    }
+  }
+
+  //Composicion
+  createComposition(fromClassId: string | null, toClassId: string | null, multiplicityFrom: string, multiplicityTo: string): void {
+
+    console.log('From Class ID:', fromClassId);
+    console.log('To Class ID:', toClassId);
+
+    
+    if (fromClassId && toClassId) {
+      const linkData = {
+        from: Number(fromClassId),
+        to: Number(toClassId),
+        routing: go.Routing.Orthogonal,
+        text: "text",
+        multiplicityFrom: multiplicityFrom || "",
+        multiplicityTo: multiplicityTo || "" ,
+        toArrow: "StretchedDiamond" 
+      };
+
+      const model = this.diagram.model as go.GraphLinksModel;
+
+      try {
+        model.addLinkData(linkData);
+        console.log('Enlace creado:', model.linkDataArray);
+      } catch (error) {
+        console.error('Error al agregar el enlace:', error);
+      }
+ 
+      
+    } else {
+      alert('Por favor, seleccione las clases de origen y destino.');
+    }
+  }
+
+  //Recursividad
+  createRecursion(fromClassId: string | null, toClassId: string | null, multiplicityFrom: string, multiplicityTo: string): void {
+
+    console.log('From Class ID:', fromClassId);
+    console.log('To Class ID:', toClassId);
+
+    
+    if (fromClassId && toClassId) {
+      const linkData = {
+        from: Number(fromClassId),
+        to: Number(fromClassId),
+        routing: go.Routing.Orthogonal,
+        text: "text",
+        multiplicityFrom: multiplicityFrom || "",
+        multiplicityTo: multiplicityTo || "" ,
+        toArrow: "Standard" 
+      };
+
+      const model = this.diagram.model as go.GraphLinksModel;
+
+      try {
+        model.addLinkData(linkData);
+        console.log('Enlace creado:', model.linkDataArray);
+      } catch (error) {
+        console.error('Error al agregar el enlace:', error);
+      }
+ 
+      
+    } else {
+      alert('Por favor, seleccione las clases de origen y destino.');
+    }
+  }
 
 }
