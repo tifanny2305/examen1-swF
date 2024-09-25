@@ -1,8 +1,9 @@
 import { HttpClient, HttpErrorResponse, HttpHeaders } from '@angular/common/http';
-import { Injectable } from '@angular/core';
+import { inject, Injectable } from '@angular/core';
 import { Router } from '@angular/router';
 import { Observable, throwError } from 'rxjs';
 import { tap, catchError } from 'rxjs/operators';
+import { ServerService } from './server.service';
 
 interface LoginResponse {
   token: string;
@@ -16,7 +17,7 @@ export class ApiService {
   apiUrl: string = 'http://localhost:3000/api';
   tokenKey = 'authToken';
 
-  constructor(private http: HttpClient, private router: Router) {}
+  constructor(private http: HttpClient, private router: Router, private serverService: ServerService) {}
 
   login(username: string, password: string): Observable<LoginResponse> {
     return this.http
@@ -25,10 +26,15 @@ export class ApiService {
         tap((response) => {
           if (response.token) {
             console.log('Token recibido:',response.token);
-            this.setToken(response.token);
+            this.setToken(response.token); // Guarda el token en el sistema
+            localStorage.setItem('authToken', response.token);  // Guarda el token en localStorage
+            
+            // Ahora conecta el socket después de que el token esté en localStorage
+            this.serverService.disconnect();  
+            this.serverService.connect(); 
           }
         }),
-        catchError((err) => {
+        catchError((err: HttpErrorResponse) => {  // Tipo correcto para errores HTTP
           console.error('Error en el login:', err);
           throw err;
         })

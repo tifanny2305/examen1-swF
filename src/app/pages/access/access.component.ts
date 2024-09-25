@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterOutlet, Router } from '@angular/router';
 import { HttpClient } from '@angular/common/http'; 
@@ -21,7 +21,7 @@ export class AccessComponent {
   constructor(private router: Router, private http: HttpClient, private apiService: ApiService,) {}
 
   logout(): void {
-    this.router.navigate(['']);
+    this.apiService.logout();
   }
 
   onCreateRoom(): void {
@@ -54,6 +54,7 @@ export class AccessComponent {
 
 
   onJoinRoom(): void {
+
     if (this.roomCode.trim() === '') {
       alert('El código de la sala no puede estar vacío');
       return;

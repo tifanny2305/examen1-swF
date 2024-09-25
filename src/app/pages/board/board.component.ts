@@ -1,8 +1,10 @@
 import { CommonModule } from '@angular/common';
 import { AfterViewInit, Component, ViewChild, ElementRef, ChangeDetectorRef } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { RouterModule } from '@angular/router';
+import { ActivatedRoute, RouterModule } from '@angular/router';
 import * as go from 'gojs';
+import { io, Socket } from 'socket.io-client'; 
+import { ServerService } from '../../services/server.service';
 
 @Component({
   selector: 'app-board',
@@ -10,51 +12,89 @@ import * as go from 'gojs';
   imports: [RouterModule, FormsModule, CommonModule],
   templateUrl: './board.component.html',
   styleUrls: ['./board.component.css']
+
 })
 export class BoardComponent implements AfterViewInit {
   @ViewChild('diagramDiv', { static: true }) diagramDiv!: ElementRef;
   public  diagram!: go.Diagram;
+  private roomCode!: string;
 
-  attributeName: string = ''; // Nombre del atributo
-  methodName: string = ''; // Nombre del método
+  attributeName: string = ''; // Nombre del atributo select
+  methodName: string = ''; // Nombre del método select
+  selectedAttribute: string = ''; //Nombre del atributoDelete select
+  selectedMethod: string = ''; //Nombre del metodoDelete select
+
   methodReturnType: string = 'void'; // Tipo de retorno por defecto para métodos
   attributeReturnType: string = 'void'; 
+
   selectedRelationType: string = 'association'; // Tipo de relación seleccionado
-
-  fromClassId: number | null = null; // Clase de origen seleccionada
-  toClassId: number | null = null;   // Clase de destino seleccionada
-
+  fromClassId: string | null = null; // Clase de origen seleccionada
+  toClassId: string | null = null;   // Clase de destino seleccionada
   classList: any[] = [];  // Lista de clases (nodos) disponibles para seleccionar
 
+  //PRUEBAS
+  //serverService = inject(ServerService)
 
-  constructor(private cdr: ChangeDetectorRef) {}
+  constructor(
+    private cdr: ChangeDetectorRef, 
+    private activatedRoute: ActivatedRoute,
+    private serverService: ServerService) {} 
 
+
+  
   ngAfterViewInit(): void {
+    //obtiene el cod de la sala desde el url
+    this.roomCode = this.activatedRoute.snapshot.paramMap.get('codigo') || '';
+    // Unirse al board (pizarra)
+    //this.serverService.connect();
+    this.serverService.joinBoard(this.roomCode);
+
     this.diagram = new go.Diagram(this.diagramDiv.nativeElement);
     this.initializeDiagram();
-
-    // Actualizar la lista de clases después de inicializar el diagrama
-    this.classList = this.diagram.model.nodeDataArray;
-
-    // Forzar la detección de cambios después de actualizar la lista
     this.cdr.detectChanges();
-  }
 
+    // Escuchar cambios en el modelo de GoJS
+    this.diagram.addModelChangedListener((event) => {
+      if (event.isTransactionFinished) {
+        // Capturamos todos los cambios del diagrama
+        const modelChanges = this.diagram.model.toJson();
+      
+      // Enviamos los cambios al servidor
+      this.serverService.sendDiagramUpdate({
+        roomCode: this.roomCode, 
+        diagramData: modelChanges
+      });
+    }
+    });
+
+    // Escuchar las actualizaciones del diagrama desde el servidor
+    this.serverService.onDiagramUpdate().subscribe(data => {
+      this.updateDiagramFromSocket(data);
+      this.cdr.detectChanges();
+    });
+  }
+  
+  //Inicializar el diagrama
   initializeDiagram() {
-    // Configuración de nodos (clases)
-    this.diagram.nodeTemplate = go.GraphObject.make(go.Node, 'Auto',
-      go.GraphObject.make(go.Shape, 'Rectangle', 
-        { fill: 'white', stroke: 'black', strokeWidth: 2, portId: "", fromLinkable: true, toLinkable: true }), // Habilitar enlaces en todos los lados
-      go.GraphObject.make(go.Panel, 'Vertical', { margin: 6 },  // Panel vertical para organizar el contenido
-        go.GraphObject.make(go.TextBlock,  // Nombre de la clase
+    this.diagram.nodeTemplate = go.GraphObject.make(
+      go.Node, 'Auto',
+      go.GraphObject.make(go.Shape, 'RoundedRectangle', 
+        { fill: 'lightblue', stroke: 'black', strokeWidth: 1, portId: "" }), 
+      go.GraphObject.make(
+        go.Panel, 'Vertical', { margin: 5
+         }, 
+        go.GraphObject.make(
+
+          // Nombre de la clase
+          go.TextBlock,  
           {
-            font: 'bold 12pt sans-serif',
-            margin: new go.Margin(10, 0, 10, 0),  // Espaciado adicional
-            editable: true
+            font: 'bold 11pt sans-serif',
+            margin: new go.Margin(5, 0, 5, 0),  
+            editable: true      
           },
           new go.Binding('text', 'name').makeTwoWay()),
     
-        go.GraphObject.make(go.Shape, "LineH", { strokeWidth: 2 }),  // Línea horizontal
+        go.GraphObject.make(go.Shape, "LineH", { strokeWidth: 1,maxSize: new go.Size(NaN, 10) }),  // Línea horizontal
     
         go.GraphObject.make(go.Panel, 'Vertical',  // Panel para los atributos
           new go.Binding('itemArray', 'attributes'),
@@ -66,7 +106,7 @@ export class BoardComponent implements AfterViewInit {
           }
         ),
     
-        go.GraphObject.make(go.Shape, "LineH", { strokeWidth: 2 }),  // Otra línea horizontal
+        go.GraphObject.make(go.Shape, "LineH", { strokeWidth: 1, maxSize: new go.Size(NaN, 10) }),  // Otra línea horizontal
     
         go.GraphObject.make(go.Panel, 'Vertical',  // Panel para los métodos
           new go.Binding('itemArray', 'methods'),
@@ -80,111 +120,6 @@ export class BoardComponent implements AfterViewInit {
       )
     );
 
-    this.diagram.toolManager.linkingTool.isEnabled = false;
-    this.diagram.toolManager.relinkingTool.isEnabled = false;
-
-    // Plantilla para Asociación
-    this.diagram.linkTemplateMap.add("association", go.GraphObject.make(go.Link,
-      {
-        routing: go.Link.Orthogonal,
-        corner: 10,
-        relinkableFrom: true,
-        relinkableTo: true,
-        reshapable: true,
-        resegmentable: true
-      },
-      go.GraphObject.make(go.Shape, { strokeWidth: 2 }),  // Línea básica
-      go.GraphObject.make(go.Shape, { toArrow: 'OpenTriangle' }),  // Flecha de Asociación
-    
-      // Multiplicidad en el extremo 'from'
-      go.GraphObject.make(go.Panel, "Auto",
-        go.GraphObject.make(go.Shape, { fill: 'transparent' }),  // Agregar un shape invisible para evitar el error
-        go.GraphObject.make(go.TextBlock, { margin: 3, editable: true },  // Etiqueta editable de multiplicidad
-          new go.Binding("text", "fromMultiplicity").makeTwoWay())
-      ),
-    
-      // Multiplicidad en el extremo 'to'
-      go.GraphObject.make(go.Panel, "Auto",
-        go.GraphObject.make(go.Shape, { fill: 'transparent' }),  // Agregar un shape invisible para evitar el error
-        go.GraphObject.make(go.TextBlock, { margin: 3, editable: true },  // Etiqueta editable de multiplicidad
-          new go.Binding("text", "toMultiplicity").makeTwoWay())
-      ),
-    
-      go.GraphObject.make(go.Panel, 'Auto',  // Panel para la etiqueta de relación
-        go.GraphObject.make(go.Shape, { fill: '#F8F8F8', stroke: 'black' }),  // Forma básica
-        go.GraphObject.make(go.TextBlock, { margin: 3, editable: true },
-          new go.Binding('text', 'relation').makeTwoWay())  // Etiqueta editable
-      )
-    ));
-    
-    // Composición (diamante lleno)
-    this.diagram.linkTemplateMap.add("composition", go.GraphObject.make(go.Link,
-      {
-        routing: go.Link.Orthogonal,
-        corner: 10,
-        relinkableFrom: true,
-        relinkableTo: true,
-        reshapable: true,
-        resegmentable: true
-      },
-      go.GraphObject.make(go.Shape, { strokeWidth: 2 }),  // Línea básica
-      go.GraphObject.make(go.Shape, { fromArrow: 'Diamond', fill: 'black' }),  // Diamante lleno para composición
-    
-      // Multiplicidad en el extremo 'from'
-      go.GraphObject.make(go.Panel, "Auto",
-        go.GraphObject.make(go.Shape, { fill: 'transparent' }),
-        go.GraphObject.make(go.TextBlock, { margin: 3, editable: true }, 
-          new go.Binding("text", "fromMultiplicity").makeTwoWay())
-      ),
-    
-      // Multiplicidad en el extremo 'to'
-      go.GraphObject.make(go.Panel, "Auto",
-        go.GraphObject.make(go.Shape, { fill: 'transparent' }),
-        go.GraphObject.make(go.TextBlock, { margin: 3, editable: true }, 
-          new go.Binding("text", "toMultiplicity").makeTwoWay())
-      ),
-    
-      go.GraphObject.make(go.Panel, 'Auto',
-        go.GraphObject.make(go.Shape, { fill: '#F8F8F8', stroke: 'black' }),
-        go.GraphObject.make(go.TextBlock, { margin: 3, editable: true },
-          new go.Binding('text', 'relation').makeTwoWay())
-      )
-    ));
-    
-    // Agregación (diamante vacío)
-    this.diagram.linkTemplateMap.add("aggregation", go.GraphObject.make(go.Link,
-      {
-        routing: go.Link.Orthogonal,
-        corner: 10,
-        relinkableFrom: true,
-        relinkableTo: true,
-        reshapable: true,
-        resegmentable: true
-      },
-      go.GraphObject.make(go.Shape, { strokeWidth: 2 }),  // Línea básica
-      go.GraphObject.make(go.Shape, { fromArrow: 'Diamond', fill: 'white' }),  // Diamante vacío para agregación
-    
-      // Multiplicidad en el extremo 'from'
-      go.GraphObject.make(go.Panel, "Auto",
-        go.GraphObject.make(go.Shape, { fill: 'transparent' }),
-        go.GraphObject.make(go.TextBlock, { margin: 3, editable: true }, 
-          new go.Binding("text", "fromMultiplicity").makeTwoWay())
-      ),
-    
-      // Multiplicidad en el extremo 'to'
-      go.GraphObject.make(go.Panel, "Auto",
-        go.GraphObject.make(go.Shape, { fill: 'transparent' }),
-        go.GraphObject.make(go.TextBlock, { margin: 3, editable: true }, 
-          new go.Binding("text", "toMultiplicity").makeTwoWay())
-      ),
-    
-      go.GraphObject.make(go.Panel, 'Auto',
-        go.GraphObject.make(go.Shape, { fill: '#F8F8F8', stroke: 'black' }),
-        go.GraphObject.make(go.TextBlock, { margin: 3, editable: true },
-          new go.Binding('text', 'relation').makeTwoWay())
-      )
-    ));
-
     // Inicializar el modelo con algunas clases de prueba
     this.diagram.model = new go.GraphLinksModel(
       [
@@ -193,12 +128,32 @@ export class BoardComponent implements AfterViewInit {
       ],
       []
     );
-
-    // Actualizar la lista de clases disponibles para relacionar
-    this.classList = this.diagram.model.nodeDataArray;
   }
 
+  // Método para actualizar el diagrama cuando recibimos datos de otros usuarios
+  updateDiagramFromSocket(diagramData: string): void {
+    this.diagram.model = go.Model.fromJson(diagramData);
+    this.cdr.detectChanges();  
+  }
+
+  // Enviar actualizaciones del diagrama cuando se hagan cambios
+  sendDiagramUpdate(): void {
+    /*const model = this.diagram.model as go.GraphLinksModel;
+    const data = {
+      nodeDataArray: model.nodeDataArray.slice(),
+      linkDataArray: model.linkDataArray.slice()
+    };
+    this.serverService.sendDiagramUpdate({ codigo: this.roomCode, ...data });*/
+
+    const diagramJson = this.diagram.model.toJson(); // Convertir el modelo a JSON
   
+    this.serverService.sendDiagramUpdate({
+      roomCode: this.roomCode,
+      diagramJson // Enviar el JSON del diagrama
+  });
+
+  console.log('Enviando actualización del diagrama:', diagramJson);
+  }
 
   // Método para agregar una nueva clase
   addClass() {
@@ -210,56 +165,55 @@ export class BoardComponent implements AfterViewInit {
     };
     (this.diagram.model as go.GraphLinksModel).addNodeData(newClass);
     this.classList = this.diagram.model.nodeDataArray; // Actualizar la lista de clases
+    this.sendDiagramUpdate();
   }
 
-  // Método para agregar un atributo a la clase seleccionada
+  //Agregar atributos
   addAttribute() {
-    const selectedClass = this.diagram.selection.first(); // Seleccionar la primera clase activa
+    const selectedClass = this.diagram.selection.first();
     if (selectedClass && this.attributeName) {
       const classData = selectedClass.data;
-      classData.attributes.push({ name: `${this.methodName} : ${this.attributeReturnType}` });
+      classData.attributes.push({ name: `${this.attributeName} : ${this.attributeReturnType}` });
       this.diagram.model.updateTargetBindings(classData); // Actualizar los enlaces
       this.attributeName = ''; // Limpiar el campo
     }
   }
 
-  // Método para agregar un método a la clase seleccionada
+  //Agregar metodos
   addMethod() {
-    const selectedClass = this.diagram.selection.first(); // Seleccionar la primera clase activa
+    const selectedClass = this.diagram.selection.first();
     if (selectedClass && this.methodName) {
       const classData = selectedClass.data;
       classData.methods.push({ name: `${this.methodName} : ${this.methodReturnType}` });
       this.diagram.model.updateTargetBindings(classData); // Actualizar los enlaces
       this.methodName = ''; // Limpiar el campo
-      this.methodReturnType = 'void'; // Resetear el tipo de retorno
     }
   }
 
+  //Eliminar atributo
+  removeAttribute(attributeName: string) {
+    const selectedClass = this.diagram.selection.first();
+    if (selectedClass) {
+      const classData = selectedClass.data;
+      classData.attributes = classData.attributes.filter((attribute: any) => attribute.name !== attributeName);
+      // Actualizar los enlaces 
+      this.diagram.model.updateTargetBindings(classData);
+      this.selectedAttribute = '';
+    }
+  }
+
+  //Eliminar metodo
   removeMethod(methodName: string) {
-    const selectedClass = this.diagram.selection.first(); // Seleccionar la clase activa
+    const selectedClass = this.diagram.selection.first();
     if (selectedClass) {
       const classData = selectedClass.data;
       classData.methods = classData.methods.filter((method: any) => method.name !== methodName);
-      this.diagram.model.updateTargetBindings(classData);  // Actualizar los enlaces
+      // Actualizar los enlaces 
+      this.diagram.model.updateTargetBindings(classData);
+      this.selectedMethod = '';
     }
   }
 
-  addRelation() {
-    if (this.fromClassId && this.toClassId && this.selectedRelationType) {
-      const linkData = {
-        from: this.fromClassId.toString(),  // Convertimos los IDs a string si no lo son
-        to: this.toClassId.toString(),
-        relation: this.selectedRelationType,
-        category: this.selectedRelationType,
-        fromMultiplicity: "1",  // Valor por defecto o permitir que el usuario lo seleccione
-        toMultiplicity: "*"      // Valor por defecto o permitir que el usuario lo seleccione
-      };
   
-      // Agregamos el enlace al modelo
-      (this.diagram.model as go.GraphLinksModel).addLinkData(linkData);
-      console.log(`Relación de tipo ${this.selectedRelationType} agregada entre ${this.fromClassId} y ${this.toClassId}`);
-    } else {
-      console.error("Asegúrate de seleccionar ambas clases y un tipo de relación.");
-    }
-  }
+
 }
