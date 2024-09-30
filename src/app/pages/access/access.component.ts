@@ -1,9 +1,10 @@
-import { Component, inject } from '@angular/core';
+import { Component, ElementRef, inject, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterOutlet, Router } from '@angular/router';
 import { HttpClient } from '@angular/common/http'; 
 import { FormsModule } from '@angular/forms';
 import { ApiService } from '../../services/api.service';
+
 
 @Component({
   selector: 'app-access',

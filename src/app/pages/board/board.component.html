@@ -1,13 +1,29 @@
 <div class="max-w-7xl mx-auto space-y-4 px-6 py-8 bg-gray-50 rounded-lg shadow-md">
 
-  <!-- Agregar Clase -->
-  <div class="space-y-4 bg-white p-4 rounded-lg shadow-lg">
-    <h3 class="text-base font-medium mb-2 text-gray-800">Agregar Clase</h3>
-    <button 
-      class="bg-blue-900 text-white text-sm px-3 py-1 rounded-md hover:bg-blue-500 transition-all shadow"
-      (click)="addClass()">
-      Agregar Clase
-    </button>
+  <div class="flex space-x-4 bg-white p-4 rounded-lg shadow-lg mt-4">
+    <!-- Agregar Clase -->
+      <button 
+        class="bg-blue-900 text-white text-sm px-3 py-1 rounded-md hover:bg-blue-500 transition-all shadow"
+        (click)="addClass()">
+        Agregar Clase
+      </button>
+
+    <!-- Exportar XML -->
+      <button 
+        class="bg-blue-900 text-white text-sm px-3 py-1 rounded-md hover:bg-blue-500 transition-all shadow"
+        (click)="exportDiagram()">
+        Exportar Diagrama
+      </button>
+
+    <!-- Importar XML -->
+      <input type="file" id="fileInput" style="display: none;" (change)="importDiagram($event)" />
+
+      <button 
+        class="bg-blue-900 text-white text-sm px-3 py-1 rounded-md hover:bg-blue-500 transition-all shadow"
+        (click)="triggerFileInput()">
+        Importar Diagrama
+      </button>
+    
   </div>
 
   <div class="grid grid-cols-2 gap-4">
@@ -110,7 +126,6 @@
   </div>
 
   <!-- Contenedor de Relaciones -->
-
   <div class="space-y-4 bg-white p-4 rounded-lg shadow-lg mt-4">
     <h3 class="text-base font-medium mb-2 text-gray-800">Relaciones</h3>
     <div class="grid grid-cols-2 gap-4">
@@ -185,6 +200,13 @@
         (click)="createRecursion(fromClassId, fromClassId, multiplicityFrom, multiplicityTo)" 
         class="bg-green-600 text-white text-sm px-3 py-1 rounded-md hover:bg-green-500 transition-all shadow">
         Crear Recursion
+      </button>
+
+      <!-- Muchos a Muchos -->
+      <button 
+        (click)="createManyToMany(fromClassId, toClassId, multiplicityFrom, multiplicityTo)" 
+        class="bg-green-600 text-white text-sm px-3 py-1 rounded-md hover:bg-green-500 transition-all shadow">
+        Crear Muchos a Muchos
       </button>
       
     </div>
