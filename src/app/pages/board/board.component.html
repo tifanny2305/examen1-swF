@@ -42,7 +42,7 @@
           <select 
             [(ngModel)]="attributeReturnType" 
             class="border border-gray-300 rounded-md px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent">
-            <option value="integer">Integer</option>
+            <option value="integer">Int</option>
             <option value="string">String</option>
             <option value="float">Float</option>
             <option value="boolean">Boolean</option>
@@ -193,6 +193,13 @@
         (click)="createComposition(fromClassId, toClassId, multiplicityFrom, multiplicityTo)" 
         class="bg-green-600 text-white text-sm px-3 py-1 rounded-md hover:bg-green-500 transition-all shadow">
         Crear Composicion
+      </button>
+
+      <!-- Dependencia -->
+      <button 
+        (click)="createDependency(fromClassId, toClassId, multiplicityFrom, multiplicityTo)" 
+        class="bg-green-600 text-white text-sm px-3 py-1 rounded-md hover:bg-green-500 transition-all shadow">
+        Crear Dependencia
       </button>
 
       <!-- Recursion -->

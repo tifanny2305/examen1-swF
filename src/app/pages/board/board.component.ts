@@ -35,6 +35,27 @@ export class BoardComponent implements AfterViewInit {
 
   classList: any[] = [];  // Lista de clases (nodos) disponibles para seleccionar
 
+  // Aquí es donde se almacenarán los datos dinámicos del backend
+  data: {
+    nodeDataArray: Array<{
+      key: string;
+      name: string;
+      attributes: Array<{ name: string }>;
+      methods: Array<{ name: string }>;
+      location: string;
+    }>;
+    linkDataArray: Array<{
+      from: string;
+      to: string;
+      fromPort: string;
+      toPort: string;
+      text: string;
+      multiplicityFrom: string;
+      multiplicityTo: string;
+      toArrow: string;
+    }>;
+  } = { nodeDataArray: [], linkDataArray: [] };
+
   //PRUEBAS
   //serverService = inject(ServerService)
 
@@ -47,33 +68,109 @@ export class BoardComponent implements AfterViewInit {
   ngAfterViewInit(): void {
     //obtiene el cod de la sala desde el url
     this.roomCode = this.activatedRoute.snapshot.paramMap.get('codigo') || '';
-    // Unirse al board (pizarra)
-    //this.serverService.connect();
+
+    // Unirse al board y conectar servidor
+    this.serverService.connect();
     this.serverService.joinBoard(this.roomCode);
 
+    // Inicializar el diagrama
     this.diagram = new go.Diagram(this.diagramDiv.nativeElement);
     this.initializeDiagram();
     this.cdr.detectChanges();
 
-    // Escuchar cambios en el modelo de GoJS
-    this.diagram.addModelChangedListener((event) => {
-      if (event.isTransactionFinished) {
-        // Capturamos todos los cambios del diagrama
-        const modelChanges = this.diagram.model.toJson();
-      
-      // Enviamos los cambios al servidor
-      this.serverService.sendDiagramUpdate({
-        roomCode: this.roomCode, 
-        diagramData: modelChanges
-      });
-    }
+    //nodeDataArray, linkDataArray
+    this.serverService.getDiagramData(this.roomCode).subscribe((diagramData: { nodeDataArray: any[], linkDataArray: any[] }) => {
+      // Si no hay datos o están vacíos, inicializamos arrays vacíos.
+      const nodeDataArray = diagramData?.nodeDataArray?.length ? 
+      diagramData.nodeDataArray.map(node => ({
+        key: node.key,
+        name: node.name,
+        attributes: node.attributes,
+        methods: node.methods,
+        location: node.location ? node.location : "0 0"
+      })) : [];
+
+      const linkDataArray = diagramData?.linkDataArray?.length ? 
+      diagramData.linkDataArray.map(link => ({
+        from: link.from,
+        to: link.to,
+        //fromPort: link.fromPort === "0, 0" ? go.Spot.Center : link.fromPort,  
+        //toPort: link.toPort === "0, 0" ? go.Spot.Center : link.toPort,        
+        fromPort: go.Spot.parse(link.fromPort) || go.Spot.Center, 
+        toPort: go.Spot.parse(link.toPort) || go.Spot.Center,
+        text: link.text,
+        multiplicityFrom: link.multiplicityFrom || "",  
+        multiplicityTo: link.multiplicityTo || "",
+
+        toArrow: link.toArrow || ""
+      })) : [];
+  
+      // Actualizamos el modelo del diagrama
+      this.diagram.model = new go.GraphLinksModel(nodeDataArray, linkDataArray);
+      this.diagram.model = go.Model.fromJson(diagramData);
+
     });
 
-    // Escuchar las actualizaciones del diagrama desde el servidor
-    this.serverService.onDiagramUpdate().subscribe(data => {
-      this.updateDiagramFromSocket(data);
-      this.cdr.detectChanges();
+
+    // Escuchar cuando un nodo sea movido y enviar la actualización al servidor
+    this.diagram.addDiagramListener('SelectionMoved', (e: go.DiagramEvent) => {
+      e.subject.each((node: go.Node) => {
+        if (node && node.data) {
+          const nodeData = node.data;
+          const updatedPosition = node.position.toString();
+
+          this.serverService.sendDiagramUpdate({
+            roomCode: this.roomCode,
+            updateType: 'updateNodePosition',
+            data: { 
+              key: nodeData.key, 
+              location: /*updatedPosition*/ { 
+                x: node.position.x, 
+                y: node.position.y 
+              } 
+            }  // Enviar la nueva posición
+          });
+        }
+      });
     });
+
+    // Escuchar actualizaciones del servidor
+    this.serverService.onDiagramUpdate().subscribe((update) => {
+      const { updateType, data } = update;
+
+      this.diagram.startTransaction('updateFromServer');
+
+      if (updateType === 'addClass') {
+        (this.diagram.model as go.GraphLinksModel).addNodeData(data);
+
+      }else if(updateType === 'updateNodePosition'){ 
+        const node = this.diagram.findNodeForKey(data.key);
+        if (node) {
+          node.position = new go.Point(data.location.x, data.location.y);
+          this.diagram.model.setDataProperty(node.data, 'location', `${data.location.x} ${data.location.y}`);
+        }
+
+      }else if (updateType === 'updateAttribute') {
+        const node = this.diagram.findNodeForKey(data.key);
+        if (node) {
+          // Aquí nos aseguramos de que la clase reciba el nuevo atributo y lo actualizamos en el cliente
+          node.data.attributes.push(data.newAttribute);
+          this.diagram.model.updateTargetBindings(node.data);  
+        }
+
+      }else if (updateType === 'updateMethod') {
+        const node = this.diagram.findNodeForKey(data.key);
+        if (node) {
+          // Aquí nos aseguramos de que la clase reciba el nuevo atributo y lo actualizamos en el cliente
+          node.data.methods.push(data.newMethod);
+          this.diagram.model.updateTargetBindings(node.data);  
+        }
+      }
+
+
+      this.diagram.commitTransaction('updateFromServer');
+    });  
+
   }
   
   makePort(name: string, spot: go.Spot, output: boolean, input: boolean) {
@@ -84,7 +181,7 @@ export class BoardComponent implements AfterViewInit {
       cursor: "pointer"
     });
   }
-  
+
   //Inicializar el diagrama
   initializeDiagram() {
     this.diagram.nodeTemplate = go.GraphObject.make(
@@ -145,48 +242,59 @@ export class BoardComponent implements AfterViewInit {
      
     );
 
-  // Configurar el template de los enlaces
-  this.diagram.linkTemplate = go.GraphObject.make(
-    go.Link,
-    {
-      routing: go.Link.Orthogonal,  // Esto asegura que las líneas sean ortogonales
-      corner: 5,  // Bordes redondeados
-      relinkableFrom: true,
-      relinkableTo: true,
-      reshapable: true,  // Permite modificar la forma del enlace
-      resegmentable: true  // Permite ajustar los segmentos del enlace
-    },
-    go.GraphObject.make(go.Shape, { stroke: 'black', strokeWidth: 1 }), // Línea del enlace
-    
-    // Flecha destino y su relleno
-    go.GraphObject.make(go.Shape, 
-      new go.Binding("toArrow", "toArrow"),
-      new go.Binding("fill", "fill")), 
-    
-    // TextBlock para el texto en el enlace
-    go.GraphObject.make(go.TextBlock, { 
-      segmentIndex: 0, 
-      segmentOffset: new go.Point(NaN, NaN), 
-      editable: true,
-      segmentOrientation: go.Orientation.Upright  }, 
-      new go.Binding("text", "multiplicityFrom")
-    ),
+    // Configurar el template de los enlaces
+    this.diagram.linkTemplate = go.GraphObject.make(
+      go.Link,      
+      //go.GraphObject.make(go.Shape, { stroke: 'black'}), // Línea del enlace
+      
+      go.GraphObject.make(go.Shape, 
+        new go.Binding("stroke", "stroke"),   
+        new go.Binding("strokeDashArray", "strokeDashArray"),
+      ), 
 
-    go.GraphObject.make(go.TextBlock, { 
-      segmentIndex: 0, 
-      segmentFraction: 0.5, 
-      editable: true }, 
-      new go.Binding("text", "text")
-    ),
+      go.GraphObject.make(go.Shape, 
+        new go.Binding("toArrow", "toArrow"),
+        new go.Binding("fill", "fill")
+      ),
+      
+      // TextBlock para el texto en el enlace
+      go.GraphObject.make(go.TextBlock, { 
+        segmentIndex: 0, 
+        segmentOffset: new go.Point(NaN, NaN), 
+        editable: true,
+        segmentOrientation: go.Orientation.Upright  }, 
+        new go.Binding("text", "multiplicityFrom")
+      ),
 
-    go.GraphObject.make(go.TextBlock, { 
-      segmentIndex: -1, 
-      segmentOffset: new go.Point(NaN, NaN), 
-      editable: true,
-      segmentOrientation: go.Orientation.Upright  }, 
-      new go.Binding("text", "multiplicityTo")
-    )
-  );
+      go.GraphObject.make(go.TextBlock, { 
+        segmentIndex: 0, 
+        segmentFraction: 0.5, 
+        editable: true }, 
+        new go.Binding("text", "text")
+      ),
+
+      go.GraphObject.make(go.TextBlock, { 
+        segmentIndex: -1, 
+        segmentOffset: new go.Point(NaN, NaN), 
+        editable: true,
+        segmentOrientation: go.Orientation.Upright  }, 
+        new go.Binding("text", "multiplicityTo")
+      ),
+
+      new go.Binding("fromSpot", "fromPort"),  // Binding para el puerto de origen
+      new go.Binding("toSpot", "toPort")       // Binding para el puerto de destino
+    );
+    
+
+    function getNodePositionFromXMI(geometryString: string): string {
+      const leftMatch = geometryString.match(/Left=(\d+)/);
+      const topMatch = geometryString.match(/Top=(\d+)/);
+    
+      const left = leftMatch ? parseFloat(leftMatch[1]) : 0;
+      const top = topMatch ? parseFloat(topMatch[1]) : 0;
+    
+      return `${left} ${top}`;
+    }
   
     // Inicializar el modelo con algunas clases de prueba
     /*const initialClasses = [
@@ -196,63 +304,45 @@ export class BoardComponent implements AfterViewInit {
 
     // Modelo inicial sin enlaces
     //this.diagram.model = new go.GraphLinksModel(initialClasses, []);
-    this.diagram.model = new go.GraphLinksModel();
     //this.classList = initialClasses;
   
     //console.log('Clases disponibles:', this.classList);
     // Agregar listener para capturar los enlaces creados
 
-  this.diagram.addDiagramListener("LinkDrawn", (e) => {
-    const link = e.subject;
-    const fromPort = link.fromPort;
-    const toPort = link.toPort;
+    this.diagram.addDiagramListener("LinkDrawn", (e) => {
+      const link = e.subject;
+      const fromPort = link.fromPort;
+      const toPort = link.toPort;
 
-    // Obtener las coordenadas de los puertos
-    const fromPortPos = fromPort.getDocumentPoint(go.Spot.Center);
-    const toPortPos = toPort.getDocumentPoint(go.Spot.Center);
+      if (!fromPort || !toPort) {
+        console.error("No se encontraron las clases de origen o destino.");
+        return;
+      }
 
-    const linkData = {
-      from: Number(this.fromClassId),  // ID de la clase origen
-      to: Number(this.toClassId),      // ID de la clase destino
-      fromPort: `${fromPortPos.x},${fromPortPos.y}`,  // Posición del puerto origen
-      toPort: `${toPortPos.x},${toPortPos.y}`,        // Posición del puerto destino
-      routing: go.Routing.Orthogonal,  // Tipo de ruta
-      text: "tiene",                  // Nombre de la relación
-      multiplicityFrom: this.multiplicityFrom || "1",  // Multiplicidad del origen
-      multiplicityTo: this.multiplicityTo || "1",      // Multiplicidad del destino
-      toArrow: "OpenTriangle",  // Flecha del enlace (puedes cambiarlo según el tipo de relación)
-      relationType: ""  // Tipo de relación
-    };
+      const fromPortPos = fromPort.getDocumentPoint(go.Spot.Center);
+      const toPortPos = toPort.getDocumentPoint(go.Spot.Center);
 
-    // Actualizar el modelo del enlace con los datos de los puertos
-    this.diagram.model.set(link.data, "fromPort", linkData.fromPort);
-    this.diagram.model.set(link.data, "toPort", linkData.toPort);
-  });
-  }
+      const linkData = {
+        from: link.data.key,                            // ID de la clase origen
+        to: link.data.key,                              // ID de la clase destino
+        fromPort: `${fromPortPos.x},${fromPortPos.y}`,  // Posición del puerto origen
+        toPort: `${toPortPos.x},${toPortPos.y}`,        // Posición del puerto destino
+        routing: go.Routing.Orthogonal,                 // Tipo de ruta
+        text: link.data.text,                           // Nombre de la relación
+        multiplicityFrom: this.multiplicityFrom || "1", // Multiplicidad del origen
+        multiplicityTo: this.multiplicityTo || "1",     // Multiplicidad del destino
+        toArrow: link.data.toArrow,                     // Flecha del enlace
+        relationType: link.data.relationType,           // Tipo de relación
+      };
 
-  // Método para actualizar el diagrama cuando recibimos datos de otros usuarios
-  updateDiagramFromSocket(diagramData: string): void {
-    this.diagram.model = go.Model.fromJson(diagramData);
-    this.cdr.detectChanges();  
-  }
+      const model = this.diagram.model as go.GraphLinksModel;
+      model.addLinkData(linkData);
 
-  // Enviar actualizaciones del diagrama cuando se hagan cambios
-  sendDiagramUpdate(): void {
-    /*const model = this.diagram.model as go.GraphLinksModel;
-    const data = {
-      nodeDataArray: model.nodeDataArray.slice(),
-      linkDataArray: model.linkDataArray.slice()
-    };
-    this.serverService.sendDiagramUpdate({ codigo: this.roomCode, ...data });*/
+      // Actualizar el modelo del enlace con los datos de los puertos
+      this.diagram.model.set(link.data, "fromPort", `${fromPortPos.x},${fromPortPos.y}`);
+      this.diagram.model.set(link.data, "toPort", `${toPortPos.x},${toPortPos.y}`);
 
-    //const diagramJson = this.diagram.model.toJson(); // Convertir el modelo a JSON
-  
-    /*this.serverService.sendDiagramUpdate({
-      roomCode: this.roomCode,
-      diagramJson // Enviar el JSON del diagrama
     });
-
-    console.log('Enviando actualización del diagrama:', diagramJson);*/
   }
 
   // Método para agregar una nueva clase
@@ -264,9 +354,15 @@ export class BoardComponent implements AfterViewInit {
       methods: [],
       location: '100,100'
     };
+
     (this.diagram.model as go.GraphLinksModel).addNodeData(newClass);
-    this.classList = this.diagram.model.nodeDataArray; // Actualizar la lista de clases
-    this.sendDiagramUpdate();
+
+    this.serverService.sendDiagramUpdate({
+      roomCode: this.roomCode,
+      updateType: 'addClass',  // Indicar la acción realizada
+      data: newClass           // Los datos de la nueva clase
+    });
+    
   }
 
   //Agregar atributos
@@ -274,8 +370,18 @@ export class BoardComponent implements AfterViewInit {
     const selectedClass = this.diagram.selection.first();
     if (selectedClass && this.attributeName) {
       const classData = selectedClass.data;
-      classData.attributes.push({ name: `${this.attributeName} : ${this.attributeReturnType}` });
+      const newAttribute = { name: `${this.attributeName} : ${this.attributeReturnType}` };
+      
+      classData.attributes.push(newAttribute);
       this.diagram.model.updateTargetBindings(classData); // Actualizar los enlaces
+
+      // Emitir la actualización del atributo al servidor
+      this.serverService.sendDiagramUpdate({
+        roomCode: this.roomCode,
+        updateType: 'updateAttribute',
+        data: { key: classData.key, newAttribute: newAttribute }  // Enviar la clave de la clase y el nuevo atributo
+      });
+
       this.attributeName = ''; // Limpiar el campo
     }
   }
@@ -285,8 +391,18 @@ export class BoardComponent implements AfterViewInit {
     const selectedClass = this.diagram.selection.first();
     if (selectedClass && this.methodName) {
       const classData = selectedClass.data;
-      classData.methods.push({ name: `${this.methodName} : ${this.methodReturnType}` });
+      const newMethod = { name: `${this.methodName} : ${this.methodReturnType}` };
+
+      classData.methods.push(newMethod);
       this.diagram.model.updateTargetBindings(classData); // Actualizar los enlaces
+
+      // Emitir la actualización del atributo al servidor
+      this.serverService.sendDiagramUpdate({
+        roomCode: this.roomCode,
+        updateType: 'updateMethod',
+        data: { key: classData.key, newMethod: newMethod }  // Enviar la clave de la clase y el nuevo atributo
+      });
+
       this.methodName = ''; // Limpiar el campo
     }
   }
@@ -341,13 +457,12 @@ export class BoardComponent implements AfterViewInit {
           multiplicityFrom: multiplicityFrom || "",
           multiplicityTo: multiplicityTo || "",
           toArrow: "", // Puedes asignar un valor por defecto o dejarlo vacío
-          relationType: "Association"
+          relationType: "Association",
         };
 
       const model = this.diagram.model as go.GraphLinksModel;
       try {
         model.addLinkData(linkData);
-        this.sendDiagramUpdate(); // Enviar al servidor
         console.log('Enlace creado:', model.linkDataArray);
       } catch (error) {
         console.error('Error al agregar el enlace:', error);
@@ -376,14 +491,14 @@ export class BoardComponent implements AfterViewInit {
         multiplicityFrom: multiplicityFrom || "",
         multiplicityTo: multiplicityTo || "" ,
         toArrow: "OpenTriangle",
-        relationType: "Association" 
+        stroke: "black",
+        relationType: "AssociationDirect" 
       };
 
       const model = this.diagram.model as go.GraphLinksModel;
 
       try {
         model.addLinkData(linkData);
-        this.sendDiagramUpdate(); // Enviar al servidor
         console.log('Enlace creado:', model.linkDataArray);
       } catch (error) {
         console.error('Error al agregar el enlace:', error);
@@ -411,6 +526,7 @@ export class BoardComponent implements AfterViewInit {
         multiplicityFrom: multiplicityFrom || "",
         multiplicityTo: multiplicityTo || "" ,
         toArrow: "RoundedTriangle",
+        stroke: "black",
         fill: "transparent",
         relationType: "Generalization"
       };
@@ -419,7 +535,6 @@ export class BoardComponent implements AfterViewInit {
 
       try {
         model.addLinkData(linkData);
-        this.sendDiagramUpdate(); // Enviar al servidor
         console.log('Enlace creado:', model.linkDataArray);
       } catch (error) {
         console.error('Error al agregar el enlace:', error);
@@ -448,6 +563,7 @@ export class BoardComponent implements AfterViewInit {
         multiplicityTo: multiplicityTo || "" ,
         toArrow: "StretchedDiamond",
         fill: "transparent",
+        stroke: "black",
         relationType: "Agregation" 
       };
 
@@ -455,7 +571,6 @@ export class BoardComponent implements AfterViewInit {
 
       try {
         model.addLinkData(linkData);
-        this.sendDiagramUpdate(); // Enviar al servidor
         console.log('Enlace creado:', model.linkDataArray);
       } catch (error) {
         console.error('Error al agregar el enlace:', error);
@@ -483,6 +598,7 @@ export class BoardComponent implements AfterViewInit {
         multiplicityFrom: multiplicityFrom || "",
         multiplicityTo: multiplicityTo || "" ,
         toArrow: "StretchedDiamond",
+        stroke: "black",
         relationType: "Composition" 
       };
 
@@ -490,7 +606,43 @@ export class BoardComponent implements AfterViewInit {
 
       try {
         model.addLinkData(linkData);
-        this.sendDiagramUpdate(); // Enviar al servidor
+        console.log('Enlace creado:', model.linkDataArray);
+      } catch (error) {
+        console.error('Error al agregar el enlace:', error);
+      }
+ 
+      
+    } else {
+      alert('Por favor, seleccione las clases de origen y destino.');
+    }
+  }
+
+  //Dependencia
+  createDependency(fromClassId: string | null, toClassId: string | null, multiplicityFrom: string, multiplicityTo: string): void {
+
+    console.log('From Class ID:', fromClassId);
+    console.log('To Class ID:', toClassId);
+
+    
+    if (fromClassId && toClassId) {
+      const linkData = {
+        from: Number(fromClassId),
+        to: Number(toClassId),
+        routing: go.Routing.Orthogonal,
+        text: "text",
+        multiplicityFrom: multiplicityFrom || "",
+        multiplicityTo: multiplicityTo || "" ,
+        toArrow: "OpenTriangle",
+        stroke: "black",
+        strokeDashArray: [4, 2],
+        relationType: "Dependency" 
+      };
+
+      const model = this.diagram.model as go.GraphLinksModel;
+
+      try {
+        model.addLinkData(linkData);
+
         console.log('Enlace creado:', model.linkDataArray);
       } catch (error) {
         console.error('Error al agregar el enlace:', error);
@@ -518,6 +670,7 @@ export class BoardComponent implements AfterViewInit {
         multiplicityFrom: multiplicityFrom || "",
         multiplicityTo: multiplicityTo || "" ,
         toArrow: "Standard",
+        stroke: "black",
         relationType: "Association" 
       };
 
@@ -525,7 +678,6 @@ export class BoardComponent implements AfterViewInit {
 
       try {
         model.addLinkData(linkData);
-        this.sendDiagramUpdate(); // Enviar al servidor
         console.log('Enlace creado:', model.linkDataArray);
       } catch (error) {
         console.error('Error al agregar el enlace:', error);
@@ -545,43 +697,41 @@ export class BoardComponent implements AfterViewInit {
 
     if (fromClassId && toClassId) {
       const model = this.diagram.model as go.GraphLinksModel;
-  
-      //Crear el enlace principal entre las clases de origen y destino
-      const mainLinkData = {
-        from: Number(fromClassId),
-        to: Number(toClassId),
-        routing: go.Routing.Orthogonal,
-        text: "",
-        toArrow: "",
-      };
-  
-      // Añadir el enlace principal
-      model.addLinkData(mainLinkData);
-      const lastLink = model.linkDataArray[model.linkDataArray.length - 1];
 
-      //Clase Intermedia
+      // Crear la tabla intermedia
       const intermediateClass = {
-        key: model.nodeDataArray.length + 1,
-        name: 'TablaIntermedia',  
-        attributes: [],  
-        methods: [], 
-        loc: "250 150"  // Posición inicial del nodo intermedio
-      }
-  
-      //Añadir el nodo intermedio al modelo
-      model.addNodeData(intermediateClass);    
-
-      /*//Crear un enlace punteado desde el puerto en el centro del enlace principal hasta la tabla intermedia
-      const midPointLinkData = {
-        from: mainLinkData,  // Enlaza desde el puerto en el centro del enlace
-        fromPort: "midPoint",  // Puerto en el centro del enlace principal
-        to: intermediateClass.key,  // Tabla intermedia
-        routing: go.Routing.Orthogonal,
-        text: ""
+          key: model.nodeDataArray.length + 1,
+          name: 'TablaIntermedia',  
+          attributes: [],  
+          methods: [], 
       };
 
-      // ñadir el enlace punteado entre el puerto central del enlace y la tabla intermedia
-      model.addLinkData(midPointLinkData);*/
+      // Añadir el nodo intermedio al modelo
+      model.addNodeData(intermediateClass);
+
+      // Crear el enlace desde la clase de origen a la tabla intermedia
+      const fromIntermediateLinkData = {
+          from: Number(fromClassId),  // Desde la clase de origen
+          to: intermediateClass.key,    // A la tabla intermedia
+          routing: go.Routing.Orthogonal,
+          text: "",
+          toArrow: "",  // Flecha estándar hacia la tabla intermedia
+      };
+
+      // Añadir el enlace desde la clase de origen a la tabla intermedia
+      model.addLinkData(fromIntermediateLinkData);
+
+      // Crear el enlace desde la tabla intermedia a la clase de destino
+      const toIntermediateLinkData = {
+          from: Number(toClassId),          // Desde la tabla destino
+          to: intermediateClass.key,       // A la clase intermedia
+          routing: go.Routing.Orthogonal,
+          text: "",
+          toArrow: "",  // Flecha estándar desde la tabla intermedia
+      };
+
+      // Añadir el enlace desde la tabla intermedia a la clase de destino
+      model.addLinkData(toIntermediateLinkData);
 
     } else {
       alert('Por favor, seleccione las clases de origen y destino.');
@@ -692,6 +842,7 @@ export class BoardComponent implements AfterViewInit {
 
     // Establecer el modelo en GoJS
     this.diagram.model = new go.GraphLinksModel(nodeDataArray, linkDataArray);
+    this.diagram.rebuildParts();
   }
 
   triggerFileInput(): void {
