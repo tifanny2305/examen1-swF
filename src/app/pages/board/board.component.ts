@@ -142,6 +142,7 @@ export class BoardComponent implements AfterViewInit {
 
       if (updateType === 'addClass') {
         (this.diagram.model as go.GraphLinksModel).addNodeData(data);
+        this.updateClassList();
 
       }else if(updateType === 'updateNodePosition'){ 
         const node = this.diagram.findNodeForKey(data.key);
@@ -165,8 +166,35 @@ export class BoardComponent implements AfterViewInit {
           node.data.methods.push(data.newMethod);
           this.diagram.model.updateTargetBindings(node.data);  
         }
-      }
 
+      }else if (updateType === 'removeAttribute') {
+        const node = this.diagram.findNodeForKey(data.key);
+        if (node) {
+          // Eliminar el atributo de la clase
+          node.data.attributes = node.data.attributes.filter((attribute: { name: string }) => attribute.name !== data.attributeName);
+          this.diagram.model.updateTargetBindings(node.data);  // Actualizar los enlaces
+        }
+
+      }else if (updateType === 'removeMethod') {
+        const node = this.diagram.findNodeForKey(data.key);
+        if (node) {
+          // Eliminar el atributo de la clase
+          node.data.methods = node.data.methods.filter((method: { name: string }) => method.name !== data.methodName);
+          this.diagram.model.updateTargetBindings(node.data);  // Actualizar los enlaces
+        }
+
+      }else if (updateType === 'addLink') {
+        // Añadir el enlace al modelo del diagrama
+        (this.diagram.model as go.GraphLinksModel).addLinkData(data);
+
+      }else if (updateType === 'addManyToMany') {
+        // Añadir la tabla intermedia al modelo
+        (this.diagram.model as go.GraphLinksModel).addNodeData(data.intermediateClass);
+    
+        // Añadir los enlaces desde la clase de origen a la tabla intermedia y de la tabla intermedia a la clase destino
+        (this.diagram.model as go.GraphLinksModel).addLinkData(data.fromLink);
+        (this.diagram.model as go.GraphLinksModel).addLinkData(data.toLink);
+      }
 
       this.diagram.commitTransaction('updateFromServer');
     });  
@@ -281,8 +309,8 @@ export class BoardComponent implements AfterViewInit {
         new go.Binding("text", "multiplicityTo")
       ),
 
-      new go.Binding("fromSpot", "fromPort"),  // Binding para el puerto de origen
-      new go.Binding("toSpot", "toPort")       // Binding para el puerto de destino
+      //new go.Binding("fromSpot", "fromPort"),  // Binding para el puerto de origen
+      //new go.Binding("toSpot", "toPort")       // Binding para el puerto de destino
     );
     
 
@@ -362,7 +390,16 @@ export class BoardComponent implements AfterViewInit {
       updateType: 'addClass',  // Indicar la acción realizada
       data: newClass           // Los datos de la nueva clase
     });
+
+    this.updateClassList();
     
+  }
+
+  // Actualizar la lista de clases en el select
+  updateClassList() {
+    this.classList = this.diagram.model.nodeDataArray.map(node => {
+      return { key: node['key'], name: node['name'] };
+    });
   }
 
   //Agregar atributos
@@ -412,9 +449,16 @@ export class BoardComponent implements AfterViewInit {
     const selectedClass = this.diagram.selection.first();
     if (selectedClass) {
       const classData = selectedClass.data;
+
       classData.attributes = classData.attributes.filter((attribute: any) => attribute.name !== attributeName);
-      // Actualizar los enlaces 
-      this.diagram.model.updateTargetBindings(classData);
+      this.diagram.model.updateTargetBindings(classData); // Actualizar los enlaces 
+
+      this.serverService.sendDiagramUpdate({
+        roomCode: this.roomCode,
+        updateType: 'removeAttribute',  // Indicar que es una eliminación de atributo
+        data: { key: classData.key, attributeName: attributeName }  // Enviar la clave de la clase y el nombre del atributo a eliminar
+      });
+
       this.selectedAttribute = '';
     }
   }
@@ -424,9 +468,16 @@ export class BoardComponent implements AfterViewInit {
     const selectedClass = this.diagram.selection.first();
     if (selectedClass) {
       const classData = selectedClass.data;
+      
       classData.methods = classData.methods.filter((method: any) => method.name !== methodName);
-      // Actualizar los enlaces 
       this.diagram.model.updateTargetBindings(classData);
+
+      this.serverService.sendDiagramUpdate({
+        roomCode: this.roomCode,
+        updateType: 'removeMethod',  // Indicar que es una eliminación de atributo
+        data: { key: classData.key, methodName: methodName }  // Enviar la clave de la clase y el nombre del atributo a eliminar
+      });
+
       this.selectedMethod = '';
     }
   }
@@ -464,6 +515,14 @@ export class BoardComponent implements AfterViewInit {
       try {
         model.addLinkData(linkData);
         console.log('Enlace creado:', model.linkDataArray);
+
+        // Emitir la relación 
+        this.serverService.sendDiagramUpdate({
+          roomCode: this.roomCode,
+          updateType: 'addLink',  // Indicar que es una adición de enlace
+          data: linkData          // Enviar los datos del enlace
+        });
+
       } catch (error) {
         console.error('Error al agregar el enlace:', error);
       }
@@ -473,7 +532,7 @@ export class BoardComponent implements AfterViewInit {
   } else {
     alert('Por favor, seleccione las clases de origen y destino.');
   }
-}
+  }
 
   //Asociacion Directa
   createAssociationDirect(fromClassId: string | null, toClassId: string | null, multiplicityFrom: string, multiplicityTo: string): void {
@@ -500,6 +559,14 @@ export class BoardComponent implements AfterViewInit {
       try {
         model.addLinkData(linkData);
         console.log('Enlace creado:', model.linkDataArray);
+
+        // Emitir la relación 
+        this.serverService.sendDiagramUpdate({
+          roomCode: this.roomCode,
+          updateType: 'addLink',  // Indicar que es una adición de enlace
+          data: linkData          // Enviar los datos del enlace
+        });
+
       } catch (error) {
         console.error('Error al agregar el enlace:', error);
       }
@@ -536,6 +603,14 @@ export class BoardComponent implements AfterViewInit {
       try {
         model.addLinkData(linkData);
         console.log('Enlace creado:', model.linkDataArray);
+
+        // Emitir la relación 
+        this.serverService.sendDiagramUpdate({
+          roomCode: this.roomCode,
+          updateType: 'addLink',  // Indicar que es una adición de enlace
+          data: linkData          // Enviar los datos del enlace
+        });
+
       } catch (error) {
         console.error('Error al agregar el enlace:', error);
       }
@@ -572,6 +647,14 @@ export class BoardComponent implements AfterViewInit {
       try {
         model.addLinkData(linkData);
         console.log('Enlace creado:', model.linkDataArray);
+
+        // Emitir la relación 
+        this.serverService.sendDiagramUpdate({
+          roomCode: this.roomCode,
+          updateType: 'addLink',  // Indicar que es una adición de enlace
+          data: linkData          // Enviar los datos del enlace
+        });
+
       } catch (error) {
         console.error('Error al agregar el enlace:', error);
       }
@@ -607,6 +690,14 @@ export class BoardComponent implements AfterViewInit {
       try {
         model.addLinkData(linkData);
         console.log('Enlace creado:', model.linkDataArray);
+
+        // Emitir la relación 
+        this.serverService.sendDiagramUpdate({
+          roomCode: this.roomCode,
+          updateType: 'addLink',  // Indicar que es una adición de enlace
+          data: linkData          // Enviar los datos del enlace
+        });
+
       } catch (error) {
         console.error('Error al agregar el enlace:', error);
       }
@@ -642,8 +733,15 @@ export class BoardComponent implements AfterViewInit {
 
       try {
         model.addLinkData(linkData);
-
         console.log('Enlace creado:', model.linkDataArray);
+
+        // Emitir la relación 
+        this.serverService.sendDiagramUpdate({
+          roomCode: this.roomCode,
+          updateType: 'addLink',  // Indicar que es una adición de enlace
+          data: linkData          // Enviar los datos del enlace
+        });
+
       } catch (error) {
         console.error('Error al agregar el enlace:', error);
       }
@@ -679,6 +777,14 @@ export class BoardComponent implements AfterViewInit {
       try {
         model.addLinkData(linkData);
         console.log('Enlace creado:', model.linkDataArray);
+
+        // Emitir la relación 
+        this.serverService.sendDiagramUpdate({
+          roomCode: this.roomCode,
+          updateType: 'addLink',  // Indicar que es una adición de enlace
+          data: linkData          // Enviar los datos del enlace
+        });
+
       } catch (error) {
         console.error('Error al agregar el enlace:', error);
       }
@@ -732,6 +838,17 @@ export class BoardComponent implements AfterViewInit {
 
       // Añadir el enlace desde la tabla intermedia a la clase de destino
       model.addLinkData(toIntermediateLinkData);
+
+      // Emitir la información al servidor 
+      this.serverService.sendDiagramUpdate({
+        roomCode: this.roomCode,
+        updateType: 'addManyToMany',
+        data: {
+          intermediateClass: intermediateClass,
+          fromLink: fromIntermediateLinkData,
+          toLink: toIntermediateLinkData
+        }
+      });
 
     } else {
       alert('Por favor, seleccione las clases de origen y destino.');
