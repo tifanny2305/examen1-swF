@@ -14,7 +14,8 @@ interface LoginResponse {
 })
 export class ApiService {
 
-  apiUrl: string = 'http://localhost:3000/api';
+  apiUrl: string = 'https://examen1-swb-production.up.railway.app/api';
+
   tokenKey = 'authToken';
 
   constructor(private http: HttpClient, private router: Router, private serverService: ServerService) {}
