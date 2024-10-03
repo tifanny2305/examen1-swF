@@ -1,11 +1,11 @@
 <section class="min-h-screen flex flex-col bg-gradient-to-r from-cyan-600 to-blue-900">
     <!-- Encabezado -->
-    <header class="bg-white shadow w-full py-4 px-8 flex justify-end">
+    <header class="w-full py-4 px-8 flex justify-end bg-gradient-to-r from-cyan-600 to-blue-900">
       <div class="flex items-center space-x-4">
         <!-- <img src="" alt="Perfil" class="w-10 h-10 rounded-full"> -->
-        <button (click)="logout()" class="text-red-500 hover:text-red-700 font-semibold">Finalizar sesión</button>
+        <button (click)="logout()" class="text-white text-lg hover:text-red-300 font-semibold">Finalizar sesión</button>
       </div>
-    </header>
+    </header>    
   
     <!-- Contenido principal -->
     <div class="flex flex-col lg:flex-row justify-center items-center flex-grow">
@@ -44,5 +44,28 @@
         </div>
       </div>
     </div>
+
+     <!-- Listado de Salas Administradas -->
+     <div class="flex flex-col justify-center items-center bg-white rounded-lg shadow-lg p-8 m-4 w-full lg:w-3/4 mx-auto">
+      <h2 class="text-xl font-bold mb-6 text-center">Salas Administradas</h2>
+    
+      <div *ngIf="adminBoards && adminBoards.length > 0; else noBoardsMessage" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 w-full">
+        <div *ngFor="let board of adminBoards" class="bg-gray-100 rounded-lg shadow p-4">
+          <h3 class="text-lg font-semibold mb-2">{{ board.name }}</h3>
+          <p class="text-sm text-gray-600">Código: {{ board.codigo }}</p>
+          <button (click)="router.navigate(['/board', board.codigo])" class="mt-4 bg-blue-800 text-white py-2 px-4 rounded-lg hover:bg-blue-800 w-full">
+            Ingresar a Sala
+          </button>
+        </div>
+      </div>
+    
+      <ng-template #noBoardsMessage>
+        <p class="text-gray-500 text-center">No tienes salas creadas como administrador.</p>
+      </ng-template>
+    </div>
+    
+    
+
+
 </section>
 

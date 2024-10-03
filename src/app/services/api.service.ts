@@ -19,6 +19,7 @@ export class ApiService {
 
   constructor(private http: HttpClient, private router: Router, private serverService: ServerService) {}
 
+  //login
   login(username: string, password: string): Observable<LoginResponse> {
     return this.http
       .post<LoginResponse>(`${this.apiUrl}/login`, { username, password })
@@ -37,6 +38,37 @@ export class ApiService {
         catchError((err: HttpErrorResponse) => {  // Tipo correcto para errores HTTP
           console.error('Error en el login:', err);
           throw err;
+        })
+      );
+  }
+
+  // Método para registrar un nuevo usuario
+  register(username: string, password: string): Observable<any> {
+    return this.http
+      .post<any>(`${this.apiUrl}/register`, { username, password })
+      .pipe(
+        tap((response) => {
+          console.log('Registro exitoso:', response);
+        }),
+        catchError((err: HttpErrorResponse) => {
+          console.error('Error en el registro:', err);
+          return throwError(err);  // Lanza el error para manejarlo en el componente
+        })
+      );
+  }
+
+  // todas las salas como admin
+  getAdminBoards(): Observable<any> {
+    const token = this.getToken();
+    const headers = new HttpHeaders({
+      Authorization: `Bearer ${token}`
+    });
+
+    return this.http.get<any>(`${this.apiUrl}/access/findAll`, { headers })
+      .pipe(
+        catchError((error: HttpErrorResponse) => {
+          console.error('Error al obtener las salas:', error);
+          return throwError('Error al obtener las salas');
         })
       );
   }
@@ -72,6 +104,7 @@ export class ApiService {
 
   // Crear una sala
   createRoom(roomName: string): Observable<any> {
+
     if (!this.isAuthenticated()) {
       return throwError('Token no es valido o expiro');
     }

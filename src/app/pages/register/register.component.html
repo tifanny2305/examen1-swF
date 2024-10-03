@@ -1,0 +1,58 @@
+<section class="min-h-screen flex flex-col bg-gradient-to-r from-cyan-600 to-blue-900">
+    <!-- Contenedor principal -->
+    <div class="flex flex-col items-center justify-center flex-grow p-6">
+      <!-- Logo reducido -->
+      <div class="mb-8">
+        <img src="assets/images/login.png" alt="Logo" class="w-full h-64 object-contain">
+      </div>
+  
+      <!-- Contenedor del formulario -->
+      <div class="w-full bg-white rounded-lg shadow-lg p-8 max-w-md">
+        <h1 class="text-2xl font-bold text-center text-gray-900 mb-6">
+          Herramienta para programadores
+        </h1>
+  
+        <!-- Formulario de registro -->
+        <form (ngSubmit)="onRegister()" class="space-y-6">
+          <!-- Campo de Usuario -->
+          <div class="relative">
+            <label for="username" class="block mb-2 text-sm font-medium text-gray-700">Usuario</label>
+            <input type="text" name="username" id="username" [(ngModel)]="username" class="block w-full p-2.5 pl-10 text-sm border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500" placeholder="" required>
+            <!-- Icono de usuario -->
+            <div class="absolute inset-y-0 left-0 flex items-center pl-3">
+              <i class="fas fa-user text-gray-400"></i>
+            </div>
+          </div>
+  
+          <!-- Campo de Contraseña -->
+          <div class="relative">
+            <label for="password" class="block mb-2 text-sm font-medium text-gray-700">Contraseña</label>
+            <input type="password" name="password" id="password" [(ngModel)]="password" class="block w-full p-2.5 pl-10 text-sm border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500" placeholder="" required>
+            <!-- Icono de candado -->
+            <div class="absolute inset-y-0 left-0 flex items-center pl-3">
+              <i class="fas fa-lock text-gray-400"></i>
+            </div>
+          </div>
+
+          <!-- Confirmar contraseña -->
+          <div class="relative">
+            <label for="confirmPassword" class="block mb-2 text-sm font-medium text-gray-700">Confirmar Contraseña</label>
+            <input type="password" id="confirmPassword" [(ngModel)]="confirmPassword" name="confirmPassword" class="block w-full p-2.5 pl-10 text-sm border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500" required>
+          </div>
+          
+          <!-- Botón de Envío -->
+          <button type="submit" class="w-full bg-slate-700 text-white rounded-lg py-3 text-center hover:bg-slate-800 focus:outline-none focus:ring-4 focus:ring-blue-300 transition-all">
+            Resgistrate
+          </button>
+
+          <div class="flex items-center">
+            <p class="text-sm text-gray-500">
+              ¿Ya tienes una cuenta?
+              <a (click)="onLogin()" class="text-blue-500 hover:underline">Inicia sesión aquí</a>
+            </p>
+          </div>
+
+        </form>
+      </div>
+    </div>
+  </section>

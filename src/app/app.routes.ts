@@ -3,6 +3,7 @@ import { LoginComponent } from './pages/login/login.component';
 import { AccessComponent } from './pages/access/access.component';
 import { BoardComponent } from './pages/board/board.component';
 import { notAuthenticateGuard } from './guard/not-authenticate.guard';
+import { RegisterComponent } from './pages/register/register.component';
 
 
 export const routes: Routes = [
@@ -22,6 +23,10 @@ export const routes: Routes = [
         path: 'board/:codigo',
         component: BoardComponent,
         canActivate: [notAuthenticateGuard]
+    },
+    {
+        path: 'register',
+        component: RegisterComponent,
     },
 
 ];

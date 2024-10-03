@@ -15,14 +15,19 @@ import { ApiService } from '../../services/api.service';
 })
 export class AccessComponent {
 
+  adminBoards: any[] = [];
   roomName: string = '';  // crear sala
   roomCode: string = '';  // unirse a sala
   isLoading: boolean = false; 
 
-  constructor(private router: Router, private http: HttpClient, private apiService: ApiService,) {}
+  constructor(public router: Router, private http: HttpClient, private apiService: ApiService,) {}
 
   logout(): void {
     this.apiService.logout();
+  }
+
+  ngOnInit(): void {
+    this.loadAdminBoards();
   }
 
   onCreateRoom(): void {
@@ -53,7 +58,6 @@ export class AccessComponent {
     }
   }
 
-
   onJoinRoom(): void {
 
     if (this.roomCode.trim() === '') {
@@ -81,6 +85,18 @@ export class AccessComponent {
         }
       });
     }
+  }
+
+  loadAdminBoards(): void {
+    this.apiService.getAdminBoards().subscribe({
+      next: (response) => {
+        this.adminBoards = response.boards;
+      },
+      error: (err) => {
+        console.error('Error al cargar las salas administradas:', err);
+        alert('No se pudieron cargar las salas que administras.');
+      }
+    });
   }
   
 

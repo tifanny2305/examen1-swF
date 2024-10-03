@@ -1,7 +1,8 @@
 import { CommonModule } from '@angular/common';
 import { AfterViewInit, Component, ViewChild, ElementRef, ChangeDetectorRef } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { ActivatedRoute, RouterModule } from '@angular/router';
+import { ActivatedRoute, Route, RouterModule } from '@angular/router';
+import { Router } from '@angular/router';
 import * as go from 'gojs';
 import { io, Socket } from 'socket.io-client'; 
 import { ServerService } from '../../services/server.service';
@@ -18,7 +19,9 @@ import { HttpClient, HttpHeaders } from '@angular/common/http';
 export class BoardComponent implements AfterViewInit {
   @ViewChild('diagramDiv', { static: true }) diagramDiv!: ElementRef;
   public  diagram!: go.Diagram;
-  private roomCode!: string;
+  public roomCode!: string;
+  public roomName: string | null = null;
+  private isServerUpdate: boolean = false;  //bandera de bucles
 
   attributeName: string = ''; // Nombre del atributo select
   methodName: string = ''; // Nombre del método select
@@ -61,6 +64,7 @@ export class BoardComponent implements AfterViewInit {
 
   constructor(
     private cdr: ChangeDetectorRef, 
+    private router: Router,
     private activatedRoute: ActivatedRoute,
     private serverService: ServerService,
     private httpClient: HttpClient ) {} 
@@ -76,6 +80,7 @@ export class BoardComponent implements AfterViewInit {
     // Inicializar el diagrama
     this.diagram = new go.Diagram(this.diagramDiv.nativeElement);
     this.initializeDiagram();
+    this.cargarDiagrama();
     this.cdr.detectChanges();
 
     //nodeDataArray, linkDataArray
@@ -96,8 +101,8 @@ export class BoardComponent implements AfterViewInit {
         to: link.to,
         //fromPort: link.fromPort === "0, 0" ? go.Spot.Center : link.fromPort,  
         //toPort: link.toPort === "0, 0" ? go.Spot.Center : link.toPort,        
-        fromPort: go.Spot.parse(link.fromPort) || go.Spot.Center, 
-        toPort: go.Spot.parse(link.toPort) || go.Spot.Center,
+        fromPort: link.fromPort || go.Spot.Center, 
+        toPort: link.toPort || go.Spot.Center,
         text: link.text,
         multiplicityFrom: link.multiplicityFrom || "",  
         multiplicityTo: link.multiplicityTo || "",
@@ -108,6 +113,51 @@ export class BoardComponent implements AfterViewInit {
       // Actualizamos el modelo del diagrama
       this.diagram.model = new go.GraphLinksModel(nodeDataArray, linkDataArray);
       this.diagram.model = go.Model.fromJson(diagramData);
+
+    });
+
+    // Listener para detectar cambios en el modelo (nombre, texto del enlace, etc.)
+    this.diagram.addModelChangedListener((e) => {
+      
+      if (e.change === go.ChangedEvent.Property && e.propertyName === 'name') {
+        const updatedNode = e.object;
+        if (updatedNode) {
+          this.sendClassUpdate(updatedNode['key'], updatedNode['name'], 'updateClassName');
+          this.updateClassList();
+        }
+
+      } else if (e.change === go.ChangedEvent.Property && e.propertyName === 'text') {
+        const updatedLink = e.object;
+        if (updatedLink && updatedLink['key']) {
+          this.sendClassUpdate(updatedLink['key'], updatedLink['text'], 'updateLinkText');
+        }
+
+      } else if(!this.isServerUpdate){
+        if (e.change === go.ChangedEvent.Property && e.propertyName === 'attributes') {
+          const updatedNode = e.object;
+        if (updatedNode) {  // Verificar si updatedNode no es null o undefined
+          const oldAttributes = e.oldValue || [];
+          const newAttributes = updatedNode['attributes'] || [];
+
+          if (!this.arraysAreEqual(oldAttributes, newAttributes)) {
+            this.sendClassUpdate(updatedNode['key'], newAttributes, 'attributeUp');
+          }
+        }
+      }
+
+      }else if(!this.isServerUpdate){
+        if (e.change === go.ChangedEvent.Property && e.propertyName === 'methods') {
+          const updatedNode = e.object;
+          if (updatedNode) {  // Verificar si updatedNode no es null o undefined
+            const oldMethods = e.oldValue || [];
+            const newMethods = updatedNode['methods'] || [];
+
+            if (!this.arraysAreEqual(oldMethods, newMethods)) {
+              this.sendClassUpdate(updatedNode['key'], newMethods, 'methodUp');
+            }
+          }
+        }
+      }
 
     });
 
@@ -136,6 +186,7 @@ export class BoardComponent implements AfterViewInit {
 
     // Escuchar actualizaciones del servidor
     this.serverService.onDiagramUpdate().subscribe((update) => {
+      this.isServerUpdate = true;
       const { updateType, data } = update;
 
       this.diagram.startTransaction('updateFromServer');
@@ -194,11 +245,75 @@ export class BoardComponent implements AfterViewInit {
         // Añadir los enlaces desde la clase de origen a la tabla intermedia y de la tabla intermedia a la clase destino
         (this.diagram.model as go.GraphLinksModel).addLinkData(data.fromLink);
         (this.diagram.model as go.GraphLinksModel).addLinkData(data.toLink);
-      }
 
+      }else if (updateType === 'removeClass') {
+        const classKey = data.key;
+        const model = this.diagram.model as go.GraphLinksModel;
+
+        // Eliminar la clase del diagrama
+        const nodeData = model.findNodeDataForKey(classKey);
+        if (nodeData) {
+          model.removeNodeData(nodeData);
+
+          // Eliminar los enlaces asociados
+          const linksToRemove = model.linkDataArray.filter(
+            (link: any) => link.from === classKey || link.to === classKey
+          );
+
+          linksToRemove.forEach((link: any) => {
+            model.removeLinkData(link);
+          });
+        }
+
+        this.updateClassList();
+
+      }else if (updateType === 'updateClassName') {
+        const node = this.diagram.findNodeForKey(data.key);
+        if (node) {
+          this.diagram.model.setDataProperty(node.data, 'name', data.value);
+        }
+
+      }else if (updateType === 'updateLinkText') {
+        const link = this.diagram.findLinkForKey(data.key);
+        if (link) {
+          this.diagram.model.setDataProperty(link.data, 'text', data.value);
+        }
+
+      }else if (updateType === 'attributeUp') {
+        const node = this.diagram.findNodeForKey(data.key);
+        if (node) {
+          this.diagram.model.setDataProperty(node.data, 'attributes', data.value);
+        }
+      
+      }else if (updateType === 'methodUp') {
+        const node = this.diagram.findNodeForKey(data.key);
+        if (node) {
+          this.diagram.model.setDataProperty(node.data, 'methods', data.value);
+        }
+      }
+      
       this.diagram.commitTransaction('updateFromServer');
+      this.isServerUpdate = false; 
     });  
 
+  }
+
+  //verica si cambio el atributo o metodo
+  arraysAreEqual(arr1: any[], arr2: any[]): boolean {
+    if (arr1.length !== arr2.length) return false;
+    
+    for (let i = 0; i < arr1.length; i++) {
+      if (arr1[i] !== arr2[i]) return false;
+    }
+    
+    return true;
+  }
+  
+  // Función para salir de la clase
+  exitClass( roomCode: string) {
+    console.log('Saliendo de la clase:', roomCode);
+    // Redirige o maneja la lógica de salida
+    this.router.navigate(['/access']);  // Cambia esta ruta según tu aplicación
   }
   
   makePort(name: string, spot: go.Spot, output: boolean, input: boolean) {
@@ -237,8 +352,15 @@ export class BoardComponent implements AfterViewInit {
             itemTemplate: go.GraphObject.make(go.Panel, 'Horizontal',
               go.GraphObject.make(go.TextBlock, { 
                 margin: new go.Margin(5, 0, 5, 0), 
-                editable: true },
-                new go.Binding('text', 'name').makeTwoWay())
+                editable: true,
+                textEdited: (obj: go.TextBlock) => {
+                  const updatedNode = obj.part?.data;
+                  if (updatedNode) {
+                    this.sendClassUpdate(updatedNode.key, updatedNode.attributes, 'attributeUp');
+                  }
+                }
+              },
+              new go.Binding('text', 'name').makeTwoWay())
             )
           }
         ),
@@ -255,13 +377,19 @@ export class BoardComponent implements AfterViewInit {
             itemTemplate: go.GraphObject.make(go.Panel, 'Horizontal',
               go.GraphObject.make(go.TextBlock, { 
                 margin: new go.Margin(5, 0, 5, 0), 
-                editable: true },
-                new go.Binding('text', 'name').makeTwoWay())
+                editable: true,
+                textEdited: (obj: go.TextBlock) => {  // Especificamos el tipo como go.TextBlock
+                  const updatedNode = obj.part?.data;
+                  if (updatedNode) {
+                    this.sendClassUpdate(updatedNode.key, updatedNode.methods, 'methodUp');
+                  }
+                }
+              },
+              new go.Binding('text', 'name').makeTwoWay())
             )
           }
         )
       ),
-
       // Añadir puertos en el nodo (Top, Left, Right, Bottom)
       this.makePort('T', go.Spot.Top, true, true),   // Puerto superior
       this.makePort('L', go.Spot.Left, true, true),  // Puerto izquierdo
@@ -373,6 +501,20 @@ export class BoardComponent implements AfterViewInit {
     });
   }
 
+  //envia actualizaciones de la clase
+  sendClassUpdate(classKey: string, newValue: string, updateType: string): void {
+    if (!this.isServerUpdate) {  // Solo emite si la actualización no proviene del servidor
+        this.serverService.sendDiagramUpdate({
+            roomCode: this.roomCode,
+            updateType: updateType,
+            data: {
+                key: classKey,
+                value: newValue
+            }
+        });
+    }
+  }
+
   // Método para agregar una nueva clase
   addClass() {
     const newClass = {
@@ -393,6 +535,37 @@ export class BoardComponent implements AfterViewInit {
 
     this.updateClassList();
     
+  }
+
+  // Método para eliminar una clase
+  removeClass(classKey: string): void {
+    if (!classKey) return;
+
+    const model = this.diagram.model as go.GraphLinksModel;
+
+    // Eliminar la clase del diagrama localmente
+    const nodeData = model.findNodeDataForKey(classKey);
+    if (nodeData) {
+      model.removeNodeData(nodeData);
+
+      // Eliminar los enlaces asociados
+      const linksToRemove = model.linkDataArray.filter(
+        (link: any) => link.from === classKey || link.to === classKey
+      );
+
+      linksToRemove.forEach((link: any) => {
+        model.removeLinkData(link);
+      });
+
+      this.updateClassList();
+
+      // Emitir el evento de eliminación al servidor
+      this.serverService.sendDiagramUpdate({
+        roomCode: this.roomCode,
+        updateType: 'removeClass',
+        data: { key: classKey }
+      });
+    }
   }
 
   // Actualizar la lista de clases en el select
@@ -966,5 +1139,51 @@ export class BoardComponent implements AfterViewInit {
     const fileInput = document.getElementById('fileInput') as HTMLInputElement;
     fileInput.click();
   }
+
+  //guardar el diagrama en la sala
+  guardarDiagrama() {
+    const diagramJson = this.diagram.model.toJson();  // Convertir el diagrama a JSON
+  
+    const token = localStorage.getItem('authToken');
+    // Enviar el JSON al backend para guardarlo
+    fetch(`http://localhost:3000/api/board/${this.roomCode}/save`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,  // Asegúrate de incluir el token de autenticación si es necesario
+      },
+      body: JSON.stringify({ diagram: diagramJson })
+    })
+    .then(response => response.json())
+    .then(data => {
+      if (data.ok) {
+        console.log('Diagrama guardado con éxito');
+      }
+    })
+    .catch(error => console.error('Error al guardar el diagrama:', error));
+  }
+
+  //cargar el diagrama en la sala
+  cargarDiagrama() {
+
+    const token = localStorage.getItem('authToken');
+    console.log('Token recuperado:', token); 
+
+    fetch(`http://localhost:3000/api/board/${this.roomCode}/recuperar`, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${token}`,  // Asegúrate de incluir el token de autenticación si es necesario
+      }
+    })
+    .then(response => response.json())
+    .then(data => {
+      if (data.ok && data.diagram) {
+        this.diagram.model = go.Model.fromJson(data.diagram);  // Cargar el diagrama desde el JSON
+      }
+    })
+    .catch(error => console.error('Error al cargar el diagrama:', error));
+  }
+  
+  
   
 }

@@ -10,6 +10,7 @@ import { io, Socket } from 'socket.io-client';
 export class ServerService {
   public socket!: Socket;
   public roomCode!: string;
+  public roomName!: string;
   private isConnected: boolean = false;
 
   constructor(private httpClient: HttpClient) { 
@@ -36,8 +37,6 @@ export class ServerService {
   joinBoard(roomCode: string): void {
     this.roomCode = roomCode;
     this.socket.emit('joinBoard', { codigo: roomCode });
-
-    
   }
 
   // Emite actualizaciones del diagrama
