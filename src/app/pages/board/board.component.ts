@@ -18,7 +18,7 @@ import { HttpClient, HttpHeaders } from '@angular/common/http';
 export class BoardComponent implements AfterViewInit {
   @ViewChild('diagramDiv', { static: true }) diagramDiv!: ElementRef;
   public  diagram!: go.Diagram;
-  private roomCode!: string;
+  public roomCode!: string;
 
   attributeName: string = ''; // Nombre del atributo select
   methodName: string = ''; // Nombre del método select
@@ -888,7 +888,7 @@ export class BoardComponent implements AfterViewInit {
     const token = localStorage.getItem('token');
     
     // Enviar el JSON al backend para convertirlo en XML o XMI
-    this.httpClient.post('https://examen1-swb-production.up.railway.app/api/board/export', 
+    this.httpClient.post('http://localhost:3000/api/board/export', 
       { diagram: updatedDiagramData }, 
       {
         headers: { 'Authorization': `Bearer ${token}` },
@@ -919,7 +919,7 @@ export class BoardComponent implements AfterViewInit {
     const token = localStorage.getItem('token'); // Obtén el token almacenado
   
     this.httpClient.post(
-      'https://examen1-swb-production.up.railway.app/api/board/import',
+      'http://localhost:3000/api/board/import',
       formData, 
       {
         headers: {

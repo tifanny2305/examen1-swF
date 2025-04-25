@@ -14,7 +14,7 @@ interface LoginResponse {
 })
 export class ApiService {
 
-  apiUrl: string = 'https://examen1-swb-production.up.railway.app/api';
+  apiUrl: string = 'http://localhost:3000/api';
 
   tokenKey = 'authToken';
 
@@ -36,12 +36,17 @@ export class ApiService {
             this.serverService.connect(); 
           }
         }),
-        catchError((err: HttpErrorResponse) => {  // Tipo correcto para errores HTTP
-          console.error('Error en el login:', err);
+        catchError((err: HttpErrorResponse) => {
+          console.error('Detalles completos del error:', {
+            status: err.status,
+            message: err.message,
+            error: err.error,  // Esto contiene la respuesta del servidor
+            url: err.url
+          });
           throw err;
         })
       );
-  }
+    }
 
   // Método para registrar un nuevo usuario
   register(username: string, password: string): Observable<any> {
