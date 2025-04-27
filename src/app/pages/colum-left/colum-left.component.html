@@ -1,0 +1,24 @@
+<!-- Component categories -->
+<div>
+    <div class="p-4">
+        <h3 class="font-semibold text-gray-600 mb-2">Elementos Basicos</h3>
+        <div class="space-y-2 space-x-2">
+
+
+            <button (click)="addComponent()"
+                class="border border-gray-300 rounded p-3 bg-gray-50 hover:bg-gray-100 cursor-pointer">
+                <div class="flex items-center">
+                    <div class="w-6 h-6 flex items-center justify-center text-xs mr-2"></div>
+                    <span>DIV</span>
+                </div>
+            </button>
+
+        </div>
+    </div>
+    <div>
+        <h3 class="text-sm font-semibold mb-2 text-white">JSON del Canvas</h3>
+        <pre class="text-xs bg-gray-100 p-2 rounded h-80 overflow-auto whitespace-pre-wrap">
+            {{ formattedComponentsJson }}
+        </pre>
+    </div>
+</div>

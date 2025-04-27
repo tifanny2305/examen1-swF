@@ -3,6 +3,7 @@ import { Injectable } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
 import { Observable } from 'rxjs';
 import { io, Socket } from 'socket.io-client';
+import { CanvasComponent } from '../pages/board/canvas.interface';
 
 @Injectable({
   providedIn: 'root'
@@ -39,42 +40,90 @@ export class ServerService {
     this.socket.emit('joinBoard', { codigo: roomCode });
   }
 
-  // Emite actualizaciones del diagrama
-  onDiagramUpdate(): Observable<any> {
+  onInitialCanvasLoad(): Observable<any[]> {
     return new Observable(observer => {
-      this.socket.on('reciveDiagramUpdate', (data) => {
-        observer.next(data);  // Emitir la actualización a los componentes
+      this.socket.on('initialCanvasLoad', (components) => {
+        observer.next(components);
       });
-
-      // Limpiar el observable cuando ya no se necesita
-      return () => {
-        this.socket.off('reciveDiagramUpdate');
-      };
     });
   }
 
-  // Método para obtener los datos del diagrama desde el servidor
-  getDiagramData(roomCode: string): Observable<any> {
-    return new Observable((observer) => {
-      // Solicita los datos del diagrama al backend
-      this.socket.emit('requestDiagramData', { roomCode });
+  // Componentes del Canvas
+  addCanvasComponent(component: CanvasComponent): void {
+    this.socket.emit('addComponent', { 
+      roomCode: this.roomCode, 
+      component 
+    });
+  }
 
-      // Escucha los datos del diagrama que llegan del backend
-      this.socket.on('diagramData', (data: any) => {
+  //Actualizar los cambios de un componente
+  updateCanvasComponent(componentId: string, newProperties: Partial<CanvasComponent['style']>): void {
+    this.socket.emit('updateComponent', {
+      roomCode: this.roomCode,
+      componentId,
+      newProperties,
+    });
+  }
+
+  //Escucha los cambios
+  onComponentUpdated(): Observable<{componentId: string, newProperties: any}> {
+    return new Observable(observer => {
+      this.socket.on('componentUpdated', (data) => {
         observer.next(data);
       });
-
-      // Limpiar la suscripción cuando se complete
-      return () => {
-        this.socket.off('diagramData');
-      };
     });
   }
- 
-  // Escucha actualizaciones del diagrama al servidor
-  sendDiagramUpdate(update: { roomCode: string, updateType: string, data: any }): void {
-    console.log('Enviando actualización del diagrama:', update);
-    this.socket.emit('sendDiagramUpdate', update);
+
+  removeCanvasComponent(componentId: string): void {
+    this.socket.emit('removeComponent', { 
+      roomCode: this.roomCode, 
+      componentId 
+    });
+  }
+
+  // Listeners
+  onInitialCanvasState(): Observable<CanvasComponent[]> {
+    return new Observable(observer => {
+      this.socket.on('initialCanvasState', (components) => {
+        observer.next(components);
+      });
+    });
+  }
+
+  onComponentAdded(): Observable<CanvasComponent> {
+    return new Observable(observer => {
+      this.socket.on('componentAdded', (component) => {
+        observer.next(component);
+      });
+    });
+  }
+
+  
+
+  onComponentRemoved(): Observable<string> {
+    return new Observable(observer => {
+      this.socket.on('componentRemoved', (componentId) => {
+        observer.next(componentId);
+      });
+    });
+  }
+
+  //Agregar hijo
+  addChildComponent(parentId: string, child: CanvasComponent): void {
+    this.socket.emit('addChildComponent', {
+      roomCode: this.roomCode,
+      parentId,
+      child,
+    });
+  }
+
+  //Escucha al hijo
+  onChildComponentAdded(): Observable<{ parentId: string, child: CanvasComponent }> {
+    return new Observable(observer => {
+      this.socket.on('childComponentAdded', (data) => {
+        observer.next(data);
+      });
+    });
   }
   
   // Desconectar el socket
