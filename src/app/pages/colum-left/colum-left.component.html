@@ -1,20 +1,40 @@
 <!-- Component categories -->
 <div>
     <div class="p-4">
-        <h3 class="font-semibold text-gray-600 mb-2">Elementos Basicos</h3>
-        <div class="space-y-2 space-x-2">
-
-
-            <button (click)="addComponent()"
-                class="border border-gray-300 rounded p-3 bg-gray-50 hover:bg-gray-100 cursor-pointer">
-                <div class="flex items-center">
-                    <div class="w-6 h-6 flex items-center justify-center text-xs mr-2"></div>
-                    <span>DIV</span>
-                </div>
-            </button>
-
+        <h3 class="font-semibold text-gray-600 mb-2 text-center">
+          Elementos Básicos
+        </h3>
+        <div class="flex flex-wrap justify-center gap-2">
+          <button (click)="addComponent()"
+                  class="border border-gray-300 rounded p-3 bg-gray-50 hover:bg-gray-100 cursor-pointer">
+            <span>DIV</span>
+          </button>
+          <button (click)="addLabel()"
+                  class="border border-gray-300 rounded p-3 bg-gray-50 hover:bg-gray-100 cursor-pointer">
+            <span>LABEL</span>
+          </button>
+          <button (click)="addButton()"
+                  class="border border-gray-300 rounded p-3 bg-gray-50 hover:bg-gray-100 cursor-pointer">
+            <span>BUTTON</span>
+          </button>
+          <button (click)="addInput()"
+                  class="border border-gray-300 rounded p-3 bg-gray-50 hover:bg-gray-100 cursor-pointer">
+            <span>INPUT</span>
+          </button>
+          <button (click)="addTable()"
+                  class="border border-gray-300 rounded p-3 bg-gray-50 hover:bg-gray-100 cursor-pointer">
+            <span>TABLE</span>
+          </button>
+          <button (click)="addCheckbox()"
+                  class="border border-gray-300 rounded p-3 bg-gray-50 hover:bg-gray-100 cursor-pointer">
+            <span>CHECKBOX</span>
+          </button>
+          <button (click)="addSelect()"
+                  class="border border-gray-300 rounded p-3 bg-gray-50 hover:bg-gray-100 cursor-pointer">
+            <span>SELECT</span>
+          </button>
         </div>
-    </div>
+      </div>
     <div>
         <h3 class="text-sm font-semibold mb-2 text-white">JSON del Canvas</h3>
         <pre class="text-xs bg-gray-100 p-2 rounded h-80 overflow-auto whitespace-pre-wrap">

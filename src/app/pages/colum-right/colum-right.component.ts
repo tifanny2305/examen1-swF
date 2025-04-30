@@ -13,6 +13,10 @@ import { ServerService } from '../../services/server.service';
 })
 export class ColumRightComponent {
   @Input() selectedComponent: CanvasComponent | null = null;
+  @Input() components: CanvasComponent[] = [];    // <— esto faltaba
+  @Input() roomCode!: string;
+
+  constructor(private serverService: ServerService) { }
 
   // Convierte '100px' a número 100
   parsePxValue(value: string | undefined): number {
@@ -31,24 +35,31 @@ export class ColumRightComponent {
       formattedValue = `${value}px`;
     }
 
-    // Actualiza el style localmente
+    //Actualiza el style localmente
     this.selectedComponent.style[property] = formattedValue;
 
-    // Llama tu servicio de sincronización si lo necesitas
-    // (Esto depende si tienes serverService como en tu ejemplo)
-    /*
+    // Emitir sólo el parche puntual
     this.serverService.updateComponentProperties(
-      this.roomCode,
       this.selectedComponent.id,
       { [property]: formattedValue }
     );
-    */
+
+    // Salvar el canvas completo para guardarlo en BD
+    ///this.serverService.saveCanvasState(this.components);
   }
 
+  // Maneja los cambios
   onContentChange(newContent: string) {
     if (!this.selectedComponent) return;
-  
+
     this.selectedComponent.content = newContent;
+
+    // Emitir los cambios al servidor
+    this.serverService.updateComponentProperties(this.selectedComponent.id, {
+      content: newContent,
+    });
+
+    this.serverService.saveCanvasState(this.components);
   }
 
   getBorderProperty(prop: 'width' | 'style' | 'color'): string | number {
@@ -78,8 +89,13 @@ export class ColumRightComponent {
 
     const newBorder = `${width || '0'} ${style || 'solid'} ${color || '#000000'}`;
     this.onPropertyChange(newBorder, 'border');
+
+    // Emitir los cambios al servidor
+    this.serverService.updateComponentProperties(this.selectedComponent.id, {
+      border: newBorder,
+    });
   }
 
 
-  
+
 }

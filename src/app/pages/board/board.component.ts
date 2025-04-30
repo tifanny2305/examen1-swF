@@ -7,6 +7,8 @@ import { ServerService } from '../../services/server.service';
 import { CanvasComponent } from './canvas.interface';
 import { ColumLeftComponent } from '../colum-left/colum-left.component';
 import { ColumRightComponent } from '../colum-right/colum-right.component';
+import { ExportAngularComponent } from '../export-angular/export-angular.component';
+import { v4 as uuidv4 } from 'uuid';
 
 interface DragState {
   isDragging: boolean;
@@ -34,7 +36,8 @@ export class BoardComponent implements AfterViewInit {
   roomId: number = 0;
   errorMessage: string = '';
   usersInRoom: any[] = [];
-  private lastId = 0;
+  generatedHTML: string = '';
+  isHtmlModalOpen: boolean = false;
 
   // Variables para almacenar las dimensiones temporales
   components: CanvasComponent[] = [];
@@ -72,6 +75,7 @@ export class BoardComponent implements AfterViewInit {
     private serverService: ServerService,
     private router: Router,
     private cdr: ChangeDetectorRef,
+    private exportarAngular: ExportAngularComponent,
   ) { }
 
   ngOnInit(): void {
@@ -82,6 +86,11 @@ export class BoardComponent implements AfterViewInit {
     this.serverService.connect();
     this.serverService.joinBoard(this.roomCode);
 
+    // Cargar el estado inicial desde el servidor
+    this.serverService.onInitialCanvasState().subscribe(components => {
+      this.components = components;
+      this.cdr.detectChanges();
+    });
     // Escuchar carga inicial del canvas
     this.serverService.onInitialCanvasLoad().subscribe(components => {
       this.components = components;
@@ -116,6 +125,43 @@ export class BoardComponent implements AfterViewInit {
       }
     });
 
+    // Escuchar cambios de propiedades de componentes
+    this.serverService.onComponentPropertiesUpdated()
+      .subscribe(({ componentId, updatedProperties }) => {
+        const comp = this.findComponentById(componentId, this.components);
+        if (!comp) return;
+
+        // 1) Si llegó contenido, lo aplicamos al componente
+        if ((updatedProperties as any).content !== undefined) {
+          comp.content = (updatedProperties as any).content;
+        }
+
+        // 2) Luego aplicamos sólo los estilos que vengan
+        const { content, ...styleUpdates } = updatedProperties as any;
+        Object.assign(comp.style, styleUpdates);
+
+        console.log(`Componente ${componentId} actualizado:`, updatedProperties);
+        this.cdr.detectChanges();
+      });
+
+    // Escuchar cambios de contenido de componentes
+    this.serverService.onComponentContentUpdated().subscribe(({ componentId, content }) => {
+      const component = this.findComponentById(componentId, this.components);
+      if (component) {
+        component.content = content; // Actualiza el contenido del componente
+        console.log(`Contenido actualizado para el componente ${componentId}:`, content);
+        this.cdr.detectChanges();
+      }
+    });
+
+    // Escuchar cuando se elimina un componente
+    this.serverService.onComponentRemoved().subscribe((componentId: string) => {
+      this.removeRecursive(this.components, componentId);
+      if (this.selectedComponent?.id === componentId) this.selectedComponent = null;
+      console.log(`Componente eliminado: ${componentId}`);
+      this.cdr.detectChanges();
+    });
+
   }
 
   ngAfterViewInit(): void {
@@ -124,10 +170,6 @@ export class BoardComponent implements AfterViewInit {
 
   initializeCanvas(): void {
   }
-
-  /*private generateId(): string {
-    return `comp-${this.lastId++}`;
-  }*/
 
   OnAddDiv() {
     this.columLeft.addComponent();
@@ -138,7 +180,7 @@ export class BoardComponent implements AfterViewInit {
     if (!parent) return;
 
     const child: CanvasComponent = {
-      id: this.columLeft.generateId(),
+      id: uuidv4(),
       style: {
         top: '10px',
         left: '10px',
@@ -154,20 +196,28 @@ export class BoardComponent implements AfterViewInit {
       children: [],
       parentId: parent.id,
     };
-    
+
     // Emitir el evento al servidor
     this.serverService.addChildComponent(parent.id, child);
 
     if (!parent.children) parent.children = [];
     parent.children.push(child);
     this.contextMenu.visible = false;
+    this.serverService.saveCanvasState(this.components);
 
   }
 
   removeComponent(id: string) {
+    // Emitir el evento al servidor
+    this.serverService.removeCanvasComponent(id);
+
     this.removeRecursive(this.components, id);
     if (this.selectedComponent?.id === id) this.selectedComponent = null;
     this.contextMenu.visible = false;
+
+    // Guardar el estado en el servidor
+    this.serverService.saveCanvasState(this.components);
+
   }
 
   removeRecursive(list: CanvasComponent[], id: string): boolean {
@@ -182,6 +232,8 @@ export class BoardComponent implements AfterViewInit {
         return true;
       }
     }
+
+    this.serverService.saveCanvasState(this.components);
 
     return false;
   }
@@ -216,6 +268,7 @@ export class BoardComponent implements AfterViewInit {
     event.preventDefault();
     this.contextMenu.visible = false;
   }
+
   openHtmlModal() {
     this.isModalOpen = true;
   }
@@ -271,7 +324,85 @@ export class BoardComponent implements AfterViewInit {
       left: component.style.left,
       top: component.style.top,
     });
+
+    // Guardar el estado en el servidor
+    this.serverService.saveCanvasState(this.components);
   }
+
+  generateHTML(
+    components: CanvasComponent[],
+    depth: number = 0
+  ): string {
+
+    let html = '';
+    const indent = '  '.repeat(depth);
+
+    components.forEach(comp => {
+      // 1) serializar estilos
+      const style = Object.entries(comp.style || {})
+        .map(([k, v]) => `${k}: ${v};`)
+        .join(' ');
+
+      // 2) abrir wrapper <div>
+      html += `${indent}<div id="${comp.id}" style="${style}">\n`;
+
+      // 3) contenido semántico con indent interior
+      const inner = '  '.repeat(depth + 1);
+      switch (comp.type) {
+        case 'label':
+          html += `${inner}<label>${comp.content || ''}</label>\n`;
+          break;
+        case 'button':
+          html += `${inner}<button>${comp.content || ''}</button>\n`;
+          break;
+        case 'input':
+          html += `${inner}<input placeholder="${comp.content || ''}" />\n`;
+          break;
+        default:
+          html += `${inner}${comp.content || ''}\n`;
+      }
+
+      // 4) hijos recursivos
+      if (comp.children?.length) {
+        html += this.generateHTML(comp.children, depth + 1);
+      }
+
+      // 5) cerrar wrapper
+      html += `${indent}</div>\n`;
+    });
+
+    return html;
+  }
+
+  showGeneratedHTML(): void {
+    const html = this.generateHTML(this.components);
+    console.log(html); // Muestra el HTML en la consola
+
+    // Opcional: Mostrar en un modal
+    this.generatedHTML = html;
+    this.isHtmlModalOpen = true;
+  }
+
+  /*exportComponents() {
+    const projectData = {
+      name: 'MyAngularProject',
+      components: this.components.map(comp => ({
+        name: this.getComponentName(comp),
+        properties: this.getComponentProperties(comp),
+        template: this.getComponentTemplate(comp),
+        styles: this.getComponentStyles(comp)
+      }))
+    };
+    
+    this.exportarAngular.exportToZip(projectData.components, projectData.name);
+  }
+  
+  private getComponentName(component: any): string {
+    // Lógica para generar nombres de componentes
+    return component.type || 'CustomComponent';
+  }*/
+
+
 
   onMouseUp() {
     this.dragState.isDragging = false;

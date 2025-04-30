@@ -13,8 +13,15 @@
     <button class="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded shadow">
       Exportar
     </button>
+
+    <button (click)="showGeneratedHTML()" 
+      class="bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded shadow">
+      HTML
+    </button>
+
   </div>
 </header>
+
 
 <!-- El contenido de las 3 columnas -->
 <div class="flex h-[calc(100vh-64px)]"> <!-- Adjusting height to account for header -->
@@ -43,7 +50,7 @@
       <button (click)="addChild(contextMenu.targetId)" class="block px-4 py-2 hover:bg-gray-100 w-full text-left">
         Agregar hijo
       </button>
-      
+
       <!-- <button (click)="copyComponent(findComponentById(contextMenu.targetId, components)!)"
         class="block px-4 py-2 hover:bg-gray-100 w-full text-left">
         Copiar
@@ -62,6 +69,7 @@
         Eliminar
       </button>
     </div>
+
     <!-- Template de renderizado recursivo -->
     <ng-template #renderComponent let-comp="comp">
       <div class="border p-2 text-center cursor-move" [ngStyle]="comp.style"
@@ -79,11 +87,31 @@
         </ng-container>
       </div>
     </ng-template>
+
+    
+    
   </div>
 
-  <!-- Right column - Properties Panel -->
+  <!-- Columna Derecha -->
   <div class="w-1/4 bg-white border-l border-gray-200 overflow-y-auto">
     <app-colum-right [selectedComponent]="selectedComponent"></app-colum-right>
+  </div>
+
+  <!-- Modal para mostrar el HTML generado -->
+  <div *ngIf="isHtmlModalOpen" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+    <div class="bg-white rounded-lg p-6 max-w-2xl w-full">
+      <h3 class="text-xl font-bold mb-4">HTML Generado</h3>
+      <textarea 
+        readonly 
+        class="w-full h-64 p-2 border border-gray-300 rounded mb-4 font-mono text-sm">
+        {{ generatedHTML }}
+      </textarea>
+      <button 
+        (click)="isHtmlModalOpen = false" 
+        class="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded shadow">
+        Cerrar
+      </button>
+    </div>
   </div>
 
 

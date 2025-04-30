@@ -1,5 +1,5 @@
 import { HttpClient } from '@angular/common/http';
-import { Injectable } from '@angular/core';
+import { Injectable, Input } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
 import { Observable } from 'rxjs';
 import { io, Socket } from 'socket.io-client';
@@ -9,6 +9,8 @@ import { CanvasComponent } from '../pages/board/canvas.interface';
   providedIn: 'root'
 })
 export class ServerService {
+  @Input() selectedComponent: CanvasComponent | null = null;
+
   public socket!: Socket;
   public roomCode!: string;
   public roomName!: string;
@@ -74,18 +76,38 @@ export class ServerService {
     });
   }
 
-  removeCanvasComponent(componentId: string): void {
-    this.socket.emit('removeComponent', { 
-      roomCode: this.roomCode, 
-      componentId 
+  //Guarda en el servidor el estado del canvas
+  saveCanvasState(components: CanvasComponent[]): void {
+    this.socket.emit('saveCanvasState', {
+      roomCode: this.roomCode,
+      components,
     });
   }
 
-  // Listeners
+  //Muestra para lo que hay al que se unio
   onInitialCanvasState(): Observable<CanvasComponent[]> {
     return new Observable(observer => {
-      this.socket.on('initialCanvasState', (components) => {
+      this.socket.on('initialCanvasState', (components: CanvasComponent[]) => {
         observer.next(components);
+      });
+    });
+  }
+
+  //Eliminar un componente ------------------------
+
+  //Emite
+  removeCanvasComponent(componentId: string): void {
+    this.socket.emit('removeComponent', {
+      roomCode: this.roomCode,
+      componentId,
+    });
+  }
+
+  //Escucha
+  onComponentRemoved(): Observable<string> {
+    return new Observable(observer => {
+      this.socket.on('componentRemoved', (componentId) => {
+        observer.next(componentId);
       });
     });
   }
@@ -94,16 +116,6 @@ export class ServerService {
     return new Observable(observer => {
       this.socket.on('componentAdded', (component) => {
         observer.next(component);
-      });
-    });
-  }
-
-  
-
-  onComponentRemoved(): Observable<string> {
-    return new Observable(observer => {
-      this.socket.on('componentRemoved', (componentId) => {
-        observer.next(componentId);
       });
     });
   }
@@ -121,6 +133,48 @@ export class ServerService {
   onChildComponentAdded(): Observable<{ parentId: string, child: CanvasComponent }> {
     return new Observable(observer => {
       this.socket.on('childComponentAdded', (data) => {
+        observer.next(data);
+      });
+    });
+  }
+
+  //Cambios de un componente ------------------------------
+
+  //Emite
+  updateComponentProperties(
+    componentId: string,
+    updatedProperties: Partial<CanvasComponent['style']> & Partial<Pick<CanvasComponent, 'content'>>
+  ): void {
+    this.socket.emit('updateComponentProperties', {
+      roomCode: this.roomCode,
+      componentId,
+      updatedProperties,
+    });
+  }
+
+  //Escucha
+  onComponentPropertiesUpdated(): Observable<{ componentId: string, updatedProperties: Partial<CanvasComponent['style']> }> {
+    return new Observable(observer => {
+      this.socket.on('componentPropertiesUpdated', (data) => {
+        observer.next(data);
+      });
+    });
+  }
+
+  onContentChange(newContent: string) {
+    if (!this.selectedComponent) return;
+  
+    this.selectedComponent.content = newContent;
+  
+    // Emitir los cambios al servidor
+    this.updateComponentProperties(this.selectedComponent.id, {
+      content: newContent,
+    });
+  }
+
+  onComponentContentUpdated(): Observable<{ componentId: string, content: string }> {
+    return new Observable(observer => {
+      this.socket.on('componentContentUpdated', (data) => {
         observer.next(data);
       });
     });
