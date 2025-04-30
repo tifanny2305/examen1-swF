@@ -1,0 +1,136 @@
+<div *ngIf="selectedComponent">
+
+    <!-- form -->
+    <div class="p-4 space-y-4">
+        <!-- Position -->
+        <div>
+            <h4 class="text-sm font-medium text-gray-700 mb-2">Posicion</h4>
+            <div class="grid grid-cols-2 gap-2">
+                <div>
+                    <label class="block text-xs text-gray-500 mb-1">Left (px)</label>
+                    <input type="number" value="50" [ngModel]="parsePxValue(selectedComponent.style.left)"
+                        (ngModelChange)="onPropertyChange($event, 'left')"
+                        class="w-full p-2 border border-gray-300 rounded text-sm">
+                </div>
+                <div>
+                    <label class="block text-xs text-gray-500 mb-1">Top (px)</label>
+                    <input type="number" value="50" [ngModel]="parsePxValue(selectedComponent.style.top)"
+                        (ngModelChange)="onPropertyChange($event, 'top')"
+                        class="w-full p-2 border border-gray-300 rounded text-sm">
+                </div>
+            </div>
+        </div>
+
+        <!-- Tamaño -->
+        <div>
+            <h4 class="text-sm font-medium text-gray-700 mb-2">Tamaño</h4>
+            <div class="grid grid-cols-2 gap-2">
+                <div>
+                    <label class="block text-xs text-gray-500 mb-1">Ancho (px)</label>
+                    <input type="number" value="200" [ngModel]="parsePxValue(selectedComponent.style.width)"
+                        (ngModelChange)="onPropertyChange($event, 'width')"
+                        class="w-full p-2 border border-gray-300 rounded text-sm">
+                </div>
+                <div>
+                    <label class="block text-xs text-gray-500 mb-1">Alto (px)</label>
+                    <input type="number" value="100" [ngModel]="parsePxValue(selectedComponent.style.height)"
+                        (ngModelChange)="onPropertyChange($event, 'height')"
+                        class="w-full p-2 border border-gray-300 rounded text-sm">
+                </div>
+            </div>
+        </div>
+
+        <!-- Estilo -->
+        <div>
+            <h4 class="text-sm font-medium text-gray-700 mb-2">Estilo</h4>
+
+            <div class="space-y-2">
+                <div class="grid grid-cols-2 gap-4 ">
+                    <!-- Color de fondo -->
+                    <div class="mb-2">
+                        <label class="block text-xs text-gray-500 mb-1">Color de fondo</label>
+                        <div
+                            class="flex items-center gap-2 border border-gray-300 bg-white rounded px-2 py-1 text-black">
+
+                            <!-- Input tipo color sin borde -->
+                            <input type="color" [ngModel]="selectedComponent.style.backgroundColor"
+                                (ngModelChange)="onPropertyChange($event, 'backgroundColor')"
+                                class="w-6 h-6 rounded cursor-pointer p-0 outline-none border border-gray-300 bg-transparent appearance-none" />
+
+                            <!-- Input texto editable -->
+                            <input type="text" [ngModel]="selectedComponent.style.backgroundColor"
+                                (ngModelChange)="onPropertyChange($event, 'backgroundColor')"
+                                class="w-20 bg-transparent text-xs font-mono focus:outline-none border-none" />
+                        </div>
+                    </div>
+                    <!-- Color de texto -->
+                    <div class="mb-2">
+                        <label class="block text-xs text-gray-500 mb-1">Color del texto</label>
+                        <div
+                            class="flex items-center gap-2 border border-gray-300 bg-white rounded px-2 py-1 text-black">
+                            <!-- Input tipo color -->
+                            <input type="color" [ngModel]="selectedComponent.style.color || '#000000'"
+                                (ngModelChange)="onPropertyChange($event, 'color')"
+                                class="w-6 h-6 rounded cursor-pointer p-0 outline-none border border-gray-300 bg-transparent appearance-none" />
+
+                            <!-- Input texto editable -->
+                            <input type="text" [ngModel]="selectedComponent.style.color || '#000000'"
+                                (ngModelChange)="onPropertyChange($event, 'color')"
+                                class="w-20 bg-transparent text-xs font-mono focus:outline-none border-none" />
+                        </div>
+                    </div>
+
+                    <div class="mb-2">
+                        <label class="block text-xs text-gray-500 mb-1">Color Borde</label>
+                        <div class="flex items-center gap-2 border border-gray-300 bg-white rounded px-2 py-1 text-black">
+
+                            <!-- Input tipo color sin borde -->
+                            <input type="color" [ngModel]="getBorderProperty('color')"
+                                (ngModelChange)="setBorderProperty('color', $event)"
+                                class="w-6 h-6 rounded cursor-pointer p-0 outline-none border border-gray-300 bg-transparent appearance-none" />
+
+                            <!-- Input texto editable (si quieres mostrar el valor del color en texto) -->
+                            <input type="text" [ngModel]="getBorderProperty('color')"
+                                (ngModelChange)="setBorderProperty('color', $event)"
+                                class="w-20 bg-transparent text-xs font-mono focus:outline-none border-none" />
+                        </div>
+                    </div>
+                    <div class="mb-2">
+                        <label class="block text-xs text-gray-500 mb-1">Ancho Borde (px)</label>
+                        <div
+                            class="flex items-center gap-2 border border-gray-300 bg-white rounded px-2 py-1 text-black">
+
+                            <input type="number" min="0" [ngModel]="getBorderProperty('width')"
+                                (ngModelChange)="setBorderProperty('width', $event)"
+                                class="w-full bg-transparent  font-mono border-none outline-none p-0" />
+
+                            <span class="text-xs">px</span>
+                        </div>
+                    </div>
+
+                        <label class="block text-xs text-gray-500 mb-1">Esquinas (px)</label>
+                        <div class="flex items-center gap-2">
+                            <input type="range" min="0" max="50" step="1"
+                                [ngModel]="parsePxValue(selectedComponent.style.borderRadius || '0')"
+                                (ngModelChange)="onPropertyChange($event, 'borderRadius')"
+                                class="w-full h-1 bg-gray-200 rounded-lg appearance-none cursor-pointer range-sm dark:bg-gray-700" />
+                            <span class="text-xs w-8 text-center">
+                                {{selectedComponent.style.borderRadius || '0px'}}
+                            </span>
+                        </div>
+
+
+                </div>
+            </div>
+        </div>
+
+        <!-- Estilo -->
+        <div class="text-left">
+            <h4 class="text-sm font-medium text-gray-700 mb-1">Letra</h4>
+            <div *ngIf="selectedComponent" class="flex items-center gap-2 border border-gray-300 bg-white rounded px-2 py-1 text-black">
+                <label class="block mb-1 text-xs font-medium text-white"></label>
+                <input type="text" [(ngModel)]="selectedComponent.content" (ngModelChange)="onContentChange($event)"
+                    class="w-full bg-transparent font-mono border-none outline-none p-0" />
+            </div>
+        </div>
+    </div>
