@@ -14,7 +14,9 @@ interface LoginResponse {
 })
 export class ApiService {
 
-  apiUrl: string = 'http://localhost:3000/api';
+  //apiUrl: string = 'http://localhost:3000/api';
+  //https://examen1-swb.onrender.com
+  apiUrl: string = 'https://examen1-swb.onrender.com/api';
 
   tokenKey = 'authToken';
 
