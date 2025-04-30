@@ -21,7 +21,7 @@ export class ServerService {
     const token = localStorage.getItem('authToken');
   
     if (token) {
-      this.socket = io('http://localhost:3000', {
+      this.socket = io('https://examen1-swb.onrender.com', {
         autoConnect: false,
         auth: {
           token: token  // Enviar el token en el objeto auth
